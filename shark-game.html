@@ -103,6 +103,43 @@
                 top: -45px;
             }
         }
+
+        #resetButton {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 10px 20px;
+            background: rgba(255, 100, 100, 0.9);
+            color: white;
+            border: 2px solid white;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            pointer-events: auto;
+            z-index: 20;
+            transition: all 0.2s;
+        }
+
+        #resetButton:hover {
+            background: rgba(255, 120, 120, 1);
+            transform: scale(1.05);
+        }
+
+        #resetButton:active {
+            transform: scale(0.95);
+        }
+
+        @media (max-width: 600px) {
+            #resetButton {
+                font-size: 14px;
+                padding: 8px 15px;
+                top: 5px;
+                right: 5px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -113,6 +150,7 @@
             <div>満腹度: <span id="happiness">100</span>%</div>
             <div>餌をあげた回数: <span id="feedCount">0</span></div>
         </div>
+        <button id="resetButton">リセット</button>
         <div id="instructions">
             クリックで餌をあげよう！ 🐟 | 鮫をクリックして触れ合おう！ 💙
         </div>
@@ -669,14 +707,33 @@
             }
         }
 
-        // 初期化 - 3匹の鮫を生成
-        sharks.push(new Shark('clumsy', canvas.width * 0.3, canvas.height * 0.3));
-        sharks.push(new Shark('greedy', canvas.width * 0.5, canvas.height * 0.5));
-        sharks.push(new Shark('shy', canvas.width * 0.7, canvas.height * 0.7));
+        // ゲーム初期化関数
+        function initGame() {
+            // 配列をクリア
+            sharks = [];
+            foods = [];
+            particles = [];
+            bubbles = [];
 
-        for (let i = 0; i < 20; i++) {
-            bubbles.push(new Bubble());
+            // ゲーム状態をリセット
+            happiness = 100;
+            feedCount = 0;
+            happinessSpan.textContent = happiness;
+            feedCountSpan.textContent = feedCount;
+
+            // 3匹の鮫を生成
+            sharks.push(new Shark('clumsy', canvas.width * 0.3, canvas.height * 0.3));
+            sharks.push(new Shark('greedy', canvas.width * 0.5, canvas.height * 0.5));
+            sharks.push(new Shark('shy', canvas.width * 0.7, canvas.height * 0.7));
+
+            // 泡を生成
+            for (let i = 0; i < 20; i++) {
+                bubbles.push(new Bubble());
+            }
         }
+
+        // 初期化実行
+        initGame();
 
         // Canvas座標を計算する関数
         function getCanvasCoordinates(clientX, clientY) {
@@ -726,6 +783,11 @@
             e.preventDefault();
             const touch = e.touches[0];
             handleInteraction(touch.clientX, touch.clientY);
+        });
+
+        // リセットボタンのイベント
+        document.getElementById('resetButton').addEventListener('click', () => {
+            initGame();
         });
 
         // リサイズ対応
