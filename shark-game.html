@@ -488,9 +488,10 @@
                         this.maxSpeed = 1.5;
                         break;
                     case 'floating':
-                        this.gravity = -0.05; // 浮く
-                        this.maxSpeed = 0.8;
+                        this.gravity = -0.15; // 浮く（速度を上げる）
+                        this.maxSpeed = 2.5;
                         this.targetY = Math.random() * 100 + 50; // 浮く目標高さ
+                        this.vy = -1; // 初期速度を設定してすぐに浮き始める
                         break;
                     default: // normal
                         this.gravity = 0.3;
