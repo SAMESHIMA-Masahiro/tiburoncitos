@@ -228,16 +228,47 @@
                     this.fleeTimer--;
                     this.speed = this.baseSpeed * 1.5;
                 } else {
-                    // 餌を探す
+                    // 餌を探す（性格に応じた優先度付き）
                     let nearestFood = null;
                     let nearestDist = Infinity;
+                    let preferredFood = null;
+                    let preferredDist = Infinity;
 
                     for (let food of foods) {
                         const dist = Math.hypot(food.x - this.x, food.y - this.y);
+
+                        // 性格に応じた好みの餌をチェック
+                        let isPreferred = false;
+                        if (this.personality === 'shy' && food.type === 'slow') {
+                            // 臆病：ゆっくり沈む餌を好む
+                            isPreferred = true;
+                        } else if (this.personality === 'clumsy' && food.type === 'floating') {
+                            // おっちょこちょい：浮かぶ餌を好む
+                            isPreferred = true;
+                        }
+
+                        // 好みの餌を優先的に記録
+                        if (isPreferred && dist < preferredDist) {
+                            preferredDist = dist;
+                            preferredFood = food;
+                        }
+
+                        // 通常の最も近い餌も記録
                         if (dist < nearestDist) {
                             nearestDist = dist;
                             nearestFood = food;
                         }
+                    }
+
+                    // 好みの餌が範囲内にあれば優先、なければ最も近い餌
+                    const preferredRange = this.personality === 'shy' ? 400 :
+                                          this.personality === 'clumsy' ? 350 : 0;
+
+                    if (preferredFood && preferredDist < preferredRange) {
+                        nearestFood = preferredFood;
+                        nearestDist = preferredDist;
+                        // 好みの餌には素早く反応
+                        this.speed = this.baseSpeed * 2;
                     }
 
                     // よくばり：常に餌を追いかける（範囲が広い）
@@ -256,14 +287,23 @@
                         this.confusionTimer--;
                         this.speed = this.baseSpeed * 0.8;
                     } else if (nearestFood && nearestDist < detectionRange) {
-                        // 臆病：餌に近づくのを躊躇する
-                        if (this.personality === 'shy' && nearestDist < 100 && Math.random() < 0.3) {
+                        // 好みの餌かチェック
+                        const isFavoriteFood = (this.personality === 'shy' && nearestFood.type === 'slow') ||
+                                              (this.personality === 'clumsy' && nearestFood.type === 'floating');
+
+                        // 臆病：好みの餌以外では餌に近づくのを躊躇する
+                        if (this.personality === 'shy' && !isFavoriteFood && nearestDist < 100 && Math.random() < 0.3) {
                             // 時々躊躇する
                             this.speed = this.baseSpeed * 0.5;
                         } else {
                             this.targetX = nearestFood.x;
                             this.targetY = nearestFood.y;
-                            this.speed = this.baseSpeed * 1.5;
+                            // 好みの餌には速く向かう
+                            if (isFavoriteFood) {
+                                this.speed = this.baseSpeed * 2.2;
+                            } else {
+                                this.speed = this.baseSpeed * 1.5;
+                            }
                         }
                     } else {
                         // ランダムな目標地点
@@ -431,24 +471,72 @@
 
         // 餌クラス
         class Food {
-            constructor(x, y) {
+            constructor(x, y, type) {
                 this.x = x;
                 this.y = y;
                 this.size = 15;
+                this.type = type || 'normal'; // 'normal', 'slow', 'floating'
                 this.vy = 0;
-                this.gravity = 0.3;
                 this.rotation = Math.random() * Math.PI * 2;
                 this.rotationSpeed = (Math.random() - 0.5) * 0.2;
+                this.wobbleTime = Math.random() * Math.PI * 2;
+
+                // タイプ別の設定
+                switch(this.type) {
+                    case 'slow':
+                        this.gravity = 0.08; // ゆっくり沈む
+                        this.maxSpeed = 1.5;
+                        break;
+                    case 'floating':
+                        this.gravity = -0.05; // 浮く
+                        this.maxSpeed = 0.8;
+                        this.targetY = Math.random() * 100 + 50; // 浮く目標高さ
+                        break;
+                    default: // normal
+                        this.gravity = 0.3;
+                        this.maxSpeed = 5;
+                        break;
+                }
             }
 
             update() {
-                this.vy += this.gravity;
+                this.wobbleTime += 0.05;
+
+                if (this.type === 'floating') {
+                    // 浮かぶ餌：目標の高さでゆらゆら
+                    if (this.y > this.targetY) {
+                        this.vy += this.gravity;
+                    } else {
+                        this.vy = Math.sin(this.wobbleTime) * 0.3;
+                    }
+                    // 水平方向にもゆらゆら
+                    this.x += Math.cos(this.wobbleTime * 0.8) * 0.5;
+
+                    // 端に行きすぎないように
+                    if (this.x < 10) this.x = 10;
+                    if (this.x > canvas.width - 10) this.x = canvas.width - 10;
+                } else {
+                    // 通常・ゆっくり沈む餌
+                    this.vy += this.gravity;
+                }
+
+                // 最大速度制限
+                if (Math.abs(this.vy) > this.maxSpeed) {
+                    this.vy = this.maxSpeed * Math.sign(this.vy);
+                }
+
                 this.y += this.vy;
                 this.rotation += this.rotationSpeed;
 
-                // 底に到達したら停止
-                if (this.y > canvas.height - 20) {
+                // 底に到達したら停止（浮かぶ餌以外）
+                if (this.type !== 'floating' && this.y > canvas.height - 20) {
                     this.y = canvas.height - 20;
+                    this.vy = 0;
+                }
+
+                // 浮かぶ餌が上に行きすぎないように
+                if (this.type === 'floating' && this.y < 10) {
+                    this.y = 10;
                     this.vy = 0;
                 }
             }
@@ -458,8 +546,22 @@
                 ctx.translate(this.x, this.y);
                 ctx.rotate(this.rotation);
 
+                // タイプ別の色
+                let color;
+                switch(this.type) {
+                    case 'slow':
+                        color = '#98D8C8'; // 薄い青緑（ゆっくり沈む）
+                        break;
+                    case 'floating':
+                        color = '#FFE4B5'; // クリーム色（浮かぶ）
+                        break;
+                    default:
+                        color = '#FFB347'; // オレンジ（通常）
+                        break;
+                }
+
                 // 魚の形
-                ctx.fillStyle = '#FFB347';
+                ctx.fillStyle = color;
                 ctx.beginPath();
                 ctx.ellipse(0, 0, this.size, this.size * 0.7, 0, 0, Math.PI * 2);
                 ctx.fill();
@@ -477,6 +579,15 @@
                 ctx.beginPath();
                 ctx.arc(this.size * 0.4, 0, 2, 0, Math.PI * 2);
                 ctx.fill();
+
+                // タイプ別のマーク
+                if (this.type === 'floating') {
+                    // 浮かぶ餌には小さな泡
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                    ctx.beginPath();
+                    ctx.arc(-this.size * 0.5, -this.size * 0.5, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
 
                 ctx.restore();
             }
@@ -593,7 +704,11 @@
 
             // 鮫がクリックされなければ餌を追加
             if (!clickedShark) {
-                foods.push(new Food(coords.x, coords.y));
+                // ランダムに餌のタイプを選択
+                const foodTypes = ['normal', 'slow', 'floating'];
+                const randomType = foodTypes[Math.floor(Math.random() * foodTypes.length)];
+
+                foods.push(new Food(coords.x, coords.y, randomType));
                 feedCount++;
                 feedCountSpan.textContent = feedCount;
                 createParticles(coords.x, coords.y, '🐟', 3);
