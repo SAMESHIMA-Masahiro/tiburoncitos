@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>コザメ🦈</title>
+    <meta name="description" content="ブラウザで遊べるかわいい鮫の癒しゲーム">
+    <meta name="theme-color" content="#004080">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(to bottom, #001f3f, #004080, #0066cc);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #gameContainer {
+            position: relative;
+            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
+            border-radius: 20px;
+            overflow: hidden;
+            max-width: 95vw;
+            max-height: 85vh;
+        }
+
+        #gameCanvas {
+            display: block;
+            background: linear-gradient(to bottom,
+                rgba(0, 100, 200, 0.3),
+                rgba(0, 50, 150, 0.5));
+            cursor: pointer;
+            width: 100%;
+            height: auto;
+            touch-action: none;
+        }
+
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 16px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        @media (max-width: 600px) {
+            #ui {
+                font-size: 14px;
+                top: 5px;
+                left: 5px;
+            }
+        }
+
+        #instructions {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 14px;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+            pointer-events: none;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 15px;
+            border-radius: 10px;
+            white-space: nowrap;
+            max-width: 90%;
+        }
+
+        @media (max-width: 600px) {
+            #instructions {
+                font-size: 11px;
+                padding: 6px 10px;
+                bottom: 5px;
+            }
+        }
+
+        .title {
+            position: absolute;
+            top: -60px;
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.7);
+        }
+
+        @media (max-width: 600px) {
+            .title {
+                font-size: 24px;
+                top: -45px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <h1 class="title">コザメ🦈</h1>
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div id="ui">
+            <div>満腹度: <span id="happiness">100</span>%</div>
+            <div>餌をあげた回数: <span id="feedCount">0</span></div>
+        </div>
+        <div id="instructions">
+            クリックで餌をあげよう！ 🐟 | 鮫をクリックして触れ合おう！ 💙
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const happinessSpan = document.getElementById('happiness');
+        const feedCountSpan = document.getElementById('feedCount');
+
+        // ゲーム状態
+        let happiness = 100;
+        let feedCount = 0;
+        let foods = [];
+        let particles = [];
+        let bubbles = [];
+
+        // 鮫クラス
+        class Shark {
+            constructor() {
+                this.x = canvas.width / 2;
+                this.y = canvas.height / 2;
+                this.size = 60;
+                this.angle = 0;
+                this.targetAngle = 0;
+                this.speed = 1.5;
+                this.targetX = this.x;
+                this.targetY = this.y;
+                this.tailAngle = 0;
+                this.eyeScale = 1;
+                this.isHappy = false;
+                this.happyTimer = 0;
+            }
+
+            update() {
+                // 満腹度の減少
+                if (Math.random() < 0.001) {
+                    happiness = Math.max(0, happiness - 1);
+                    happinessSpan.textContent = happiness;
+                }
+
+                // 餌を探す
+                let nearestFood = null;
+                let nearestDist = Infinity;
+
+                for (let food of foods) {
+                    const dist = Math.hypot(food.x - this.x, food.y - this.y);
+                    if (dist < nearestDist) {
+                        nearestDist = dist;
+                        nearestFood = food;
+                    }
+                }
+
+                // 餌に向かうか、ランダムに泳ぐ
+                if (nearestFood && nearestDist < 300) {
+                    this.targetX = nearestFood.x;
+                    this.targetY = nearestFood.y;
+                    this.speed = 2.5;
+                } else {
+                    // ランダムな目標地点
+                    if (Math.hypot(this.targetX - this.x, this.targetY - this.y) < 50 || Math.random() < 0.01) {
+                        this.targetX = Math.random() * (canvas.width - 100) + 50;
+                        this.targetY = Math.random() * (canvas.height - 100) + 50;
+                    }
+                    this.speed = 1.5;
+                }
+
+                // 目標に向かって移動
+                const dx = this.targetX - this.x;
+                const dy = this.targetY - this.y;
+                const dist = Math.hypot(dx, dy);
+
+                if (dist > 5) {
+                    this.x += (dx / dist) * this.speed;
+                    this.y += (dy / dist) * this.speed;
+                    this.targetAngle = Math.atan2(dy, dx);
+                }
+
+                // 角度をスムーズに変更
+                let angleDiff = this.targetAngle - this.angle;
+                while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+                this.angle += angleDiff * 0.05;
+
+                // 尻尾のアニメーション
+                this.tailAngle += 0.15;
+
+                // 目の瞬き
+                if (Math.random() < 0.02) {
+                    this.eyeScale = 0.1;
+                } else if (this.eyeScale < 1) {
+                    this.eyeScale += 0.1;
+                }
+
+                // 幸せタイマー
+                if (this.happyTimer > 0) {
+                    this.happyTimer--;
+                    this.isHappy = true;
+                } else {
+                    this.isHappy = false;
+                }
+
+                // 餌を食べる
+                for (let i = foods.length - 1; i >= 0; i--) {
+                    const food = foods[i];
+                    const foodDist = Math.hypot(food.x - this.x, food.y - this.y);
+                    if (foodDist < this.size / 2) {
+                        foods.splice(i, 1);
+                        happiness = Math.min(100, happiness + 10);
+                        happinessSpan.textContent = happiness;
+                        this.makeHappy();
+                        createParticles(food.x, food.y, '💚', 5);
+                    }
+                }
+            }
+
+            makeHappy() {
+                this.happyTimer = 60;
+                createParticles(this.x, this.y - 40, '💙', 3);
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+
+                // 影
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                ctx.beginPath();
+                ctx.ellipse(5, 10, this.size * 0.8, this.size * 0.5, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 尻尾
+                const tailWave = Math.sin(this.tailAngle) * 15;
+                ctx.fillStyle = '#6FB8E8';
+                ctx.beginPath();
+                ctx.moveTo(-this.size * 0.7, 0);
+                ctx.quadraticCurveTo(-this.size * 1.2, tailWave - 20, -this.size * 1.4, tailWave - 25);
+                ctx.quadraticCurveTo(-this.size * 1.3, tailWave, -this.size * 1.4, tailWave + 25);
+                ctx.quadraticCurveTo(-this.size * 1.2, tailWave + 20, -this.size * 0.7, 0);
+                ctx.fill();
+
+                // 体
+                ctx.fillStyle = this.isHappy ? '#8FD8FF' : '#7FCDFF';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.size * 0.8, this.size * 0.5, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // ヒレ（上）
+                ctx.fillStyle = '#6FB8E8';
+                ctx.beginPath();
+                ctx.moveTo(0, -this.size * 0.5);
+                ctx.lineTo(-10, -this.size * 0.8);
+                ctx.lineTo(10, -this.size * 0.8);
+                ctx.closePath();
+                ctx.fill();
+
+                // ヒレ（横）
+                ctx.beginPath();
+                ctx.ellipse(-this.size * 0.3, this.size * 0.3, 20, 10, -0.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(-this.size * 0.3, -this.size * 0.3, 20, 10, 0.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 目
+                const eyeX = this.size * 0.3;
+                const eyeY = -10;
+
+                // 白目
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.ellipse(eyeX, eyeY, 12, 12 * this.eyeScale, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 黒目
+                ctx.fillStyle = 'black';
+                ctx.beginPath();
+                ctx.ellipse(eyeX + 2, eyeY, 6, 6 * this.eyeScale, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // ハイライト
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(eyeX + 4, eyeY - 2, 3 * this.eyeScale, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 口（笑顔）
+                if (this.isHappy) {
+                    ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(this.size * 0.5, 5, 10, 0.2, Math.PI - 0.2);
+                    ctx.stroke();
+                } else {
+                    ctx.fillStyle = '#333';
+                    ctx.beginPath();
+                    ctx.ellipse(this.size * 0.5, 5, 8, 4, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // ほっぺ
+                ctx.fillStyle = 'rgba(255, 182, 193, 0.4)';
+                ctx.beginPath();
+                ctx.arc(this.size * 0.15, 10, 8, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+
+            isClicked(mx, my) {
+                const dist = Math.hypot(mx - this.x, my - this.y);
+                return dist < this.size;
+            }
+        }
+
+        // 餌クラス
+        class Food {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.size = 15;
+                this.vy = 0;
+                this.gravity = 0.3;
+                this.rotation = Math.random() * Math.PI * 2;
+                this.rotationSpeed = (Math.random() - 0.5) * 0.2;
+            }
+
+            update() {
+                this.vy += this.gravity;
+                this.y += this.vy;
+                this.rotation += this.rotationSpeed;
+
+                // 底に到達したら停止
+                if (this.y > canvas.height - 20) {
+                    this.y = canvas.height - 20;
+                    this.vy = 0;
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+
+                // 魚の形
+                ctx.fillStyle = '#FFB347';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.size, this.size * 0.7, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 尻尾
+                ctx.beginPath();
+                ctx.moveTo(-this.size, 0);
+                ctx.lineTo(-this.size * 1.5, -this.size * 0.5);
+                ctx.lineTo(-this.size * 1.5, this.size * 0.5);
+                ctx.closePath();
+                ctx.fill();
+
+                // 目
+                ctx.fillStyle = 'black';
+                ctx.beginPath();
+                ctx.arc(this.size * 0.4, 0, 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        // パーティクルクラス
+        class Particle {
+            constructor(x, y, emoji) {
+                this.x = x;
+                this.y = y;
+                this.emoji = emoji;
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = -Math.random() * 3 - 2;
+                this.life = 60;
+                this.alpha = 1;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.1;
+                this.life--;
+                this.alpha = this.life / 60;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+                ctx.font = '24px Arial';
+                ctx.fillText(this.emoji, this.x, this.y);
+                ctx.restore();
+            }
+
+            isDead() {
+                return this.life <= 0;
+            }
+        }
+
+        // 泡クラス
+        class Bubble {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = canvas.height + 10;
+                this.size = Math.random() * 5 + 2;
+                this.speed = Math.random() * 1 + 0.5;
+                this.wobble = Math.random() * Math.PI * 2;
+                this.wobbleSpeed = Math.random() * 0.05 + 0.02;
+            }
+
+            update() {
+                this.y -= this.speed;
+                this.wobble += this.wobbleSpeed;
+                this.x += Math.sin(this.wobble) * 0.5;
+
+                if (this.y < -10) {
+                    this.y = canvas.height + 10;
+                    this.x = Math.random() * canvas.width;
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.beginPath();
+                ctx.arc(this.x - this.size * 0.3, this.y - this.size * 0.3, this.size * 0.3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // パーティクル生成
+        function createParticles(x, y, emoji, count) {
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(x, y, emoji));
+            }
+        }
+
+        // 初期化
+        const shark = new Shark();
+
+        for (let i = 0; i < 20; i++) {
+            bubbles.push(new Bubble());
+        }
+
+        // Canvas座標を計算する関数
+        function getCanvasCoordinates(clientX, clientY) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            return {
+                x: (clientX - rect.left) * scaleX,
+                y: (clientY - rect.top) * scaleY
+            };
+        }
+
+        // クリック/タップ処理関数
+        function handleInteraction(clientX, clientY) {
+            const coords = getCanvasCoordinates(clientX, clientY);
+
+            if (shark.isClicked(coords.x, coords.y)) {
+                shark.makeHappy();
+            } else {
+                foods.push(new Food(coords.x, coords.y));
+                feedCount++;
+                feedCountSpan.textContent = feedCount;
+                createParticles(coords.x, coords.y, '🐟', 3);
+            }
+        }
+
+        // マウスイベント
+        canvas.addEventListener('click', (e) => {
+            handleInteraction(e.clientX, e.clientY);
+        });
+
+        // タッチイベント（スマホ対応）
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            handleInteraction(touch.clientX, touch.clientY);
+        });
+
+        // リサイズ対応
+        function resizeCanvas() {
+            const container = document.getElementById('gameContainer');
+            const maxWidth = window.innerWidth * 0.95;
+            const maxHeight = window.innerHeight * 0.85;
+
+            let width = 800;
+            let height = 600;
+            const aspectRatio = width / height;
+
+            if (maxWidth / aspectRatio < maxHeight) {
+                width = maxWidth;
+                height = maxWidth / aspectRatio;
+            } else {
+                height = maxHeight;
+                width = maxHeight * aspectRatio;
+            }
+
+            // Note: Canvas内部サイズは固定のまま、CSSで表示サイズのみ変更
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // メインループ
+        function gameLoop() {
+            // 背景
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, 'rgba(100, 180, 255, 0.3)');
+            gradient.addColorStop(1, 'rgba(50, 100, 200, 0.5)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 泡
+            for (let bubble of bubbles) {
+                bubble.update();
+                bubble.draw();
+            }
+
+            // 餌
+            for (let food of foods) {
+                food.update();
+                food.draw();
+            }
+
+            // 鮫
+            shark.update();
+            shark.draw();
+
+            // パーティクル
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw();
+                if (particles[i].isDead()) {
+                    particles.splice(i, 1);
+                }
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // ゲーム開始
+        gameLoop();
+    </script>
+</body>
+</html>
