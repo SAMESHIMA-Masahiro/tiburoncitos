@@ -17,7 +17,7 @@
 
 ## アクセス
 
-GitHub Pages: https://YOUR_USERNAME.github.io/claude_study/
+GitHub Pages: https://sameshima-masahiro.github.io/tiburoncitos/
 
 ## 技術スタック
 
