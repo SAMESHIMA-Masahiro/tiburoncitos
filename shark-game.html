@@ -130,22 +130,69 @@
         let foods = [];
         let particles = [];
         let bubbles = [];
+        let sharks = [];
 
         // 鮫クラス
         class Shark {
-            constructor() {
-                this.x = canvas.width / 2;
-                this.y = canvas.height / 2;
-                this.size = 60;
-                this.angle = 0;
+            constructor(personality, startX, startY) {
+                this.x = startX || canvas.width / 2;
+                this.y = startY || canvas.height / 2;
+                this.size = 50;
+                this.angle = Math.random() * Math.PI * 2;
                 this.targetAngle = 0;
-                this.speed = 1.5;
+                this.personality = personality; // 'clumsy', 'greedy', 'shy'
+                this.baseSpeed = personality === 'greedy' ? 2.5 : personality === 'clumsy' ? 1.2 : 1.5;
+                this.speed = this.baseSpeed;
                 this.targetX = this.x;
                 this.targetY = this.y;
                 this.tailAngle = 0;
                 this.eyeScale = 1;
                 this.isHappy = false;
                 this.happyTimer = 0;
+                this.confusionTimer = 0; // おっちょこちょい用
+                this.fleeTimer = 0; // 臆病用
+                this.eatenCount = 0; // 食べた餌の数
+
+                // 性格別の色
+                this.colors = this.getColors();
+            }
+
+            getColors() {
+                switch(this.personality) {
+                    case 'clumsy':
+                        return {
+                            body: '#FFB6C1',
+                            bodyHappy: '#FFC8D8',
+                            tail: '#FFB6E8'
+                        };
+                    case 'greedy':
+                        return {
+                            body: '#FFA07A',
+                            bodyHappy: '#FFB89A',
+                            tail: '#FF8C69'
+                        };
+                    case 'shy':
+                        return {
+                            body: '#ADD8E6',
+                            bodyHappy: '#C8E8FF',
+                            tail: '#9AC8E8'
+                        };
+                    default:
+                        return {
+                            body: '#7FCDFF',
+                            bodyHappy: '#8FD8FF',
+                            tail: '#6FB8E8'
+                        };
+                }
+            }
+
+            getName() {
+                switch(this.personality) {
+                    case 'clumsy': return 'おっちょこちょい';
+                    case 'greedy': return 'よくばり';
+                    case 'shy': return 'おくびょう';
+                    default: return '鮫';
+                }
             }
 
             update() {
@@ -155,30 +202,77 @@
                     happinessSpan.textContent = happiness;
                 }
 
-                // 餌を探す
-                let nearestFood = null;
-                let nearestDist = Infinity;
-
-                for (let food of foods) {
-                    const dist = Math.hypot(food.x - this.x, food.y - this.y);
-                    if (dist < nearestDist) {
-                        nearestDist = dist;
-                        nearestFood = food;
+                // 他の鮫との距離をチェック（臆病な性格用）
+                let nearbyShark = null;
+                let nearbySharkDist = Infinity;
+                if (this.personality === 'shy') {
+                    for (let other of sharks) {
+                        if (other !== this) {
+                            const dist = Math.hypot(other.x - this.x, other.y - this.y);
+                            if (dist < nearbySharkDist) {
+                                nearbySharkDist = dist;
+                                nearbyShark = other;
+                            }
+                        }
                     }
                 }
 
-                // 餌に向かうか、ランダムに泳ぐ
-                if (nearestFood && nearestDist < 300) {
-                    this.targetX = nearestFood.x;
-                    this.targetY = nearestFood.y;
-                    this.speed = 2.5;
+                // 臆病：他の鮫が近くにいたら逃げる
+                if (this.personality === 'shy' && nearbyShark && nearbySharkDist < 120) {
+                    this.fleeTimer = 60;
+                    const fleeAngle = Math.atan2(this.y - nearbyShark.y, this.x - nearbyShark.x);
+                    this.targetX = this.x + Math.cos(fleeAngle) * 200;
+                    this.targetY = this.y + Math.sin(fleeAngle) * 200;
+                    this.speed = this.baseSpeed * 1.8;
+                } else if (this.fleeTimer > 0) {
+                    this.fleeTimer--;
+                    this.speed = this.baseSpeed * 1.5;
                 } else {
-                    // ランダムな目標地点
-                    if (Math.hypot(this.targetX - this.x, this.targetY - this.y) < 50 || Math.random() < 0.01) {
-                        this.targetX = Math.random() * (canvas.width - 100) + 50;
-                        this.targetY = Math.random() * (canvas.height - 100) + 50;
+                    // 餌を探す
+                    let nearestFood = null;
+                    let nearestDist = Infinity;
+
+                    for (let food of foods) {
+                        const dist = Math.hypot(food.x - this.x, food.y - this.y);
+                        if (dist < nearestDist) {
+                            nearestDist = dist;
+                            nearestFood = food;
+                        }
                     }
-                    this.speed = 1.5;
+
+                    // よくばり：常に餌を追いかける（範囲が広い）
+                    const detectionRange = this.personality === 'greedy' ? 500 : 250;
+
+                    // おっちょこちょい：ランダムに方向転換してしまう
+                    if (this.personality === 'clumsy' && Math.random() < 0.03) {
+                        this.confusionTimer = 30;
+                        this.targetX = Math.random() * canvas.width;
+                        this.targetY = Math.random() * canvas.height;
+                    }
+
+                    // 餌に向かうか、ランダムに泳ぐ
+                    if (this.confusionTimer > 0) {
+                        // おっちょこちょいが混乱中
+                        this.confusionTimer--;
+                        this.speed = this.baseSpeed * 0.8;
+                    } else if (nearestFood && nearestDist < detectionRange) {
+                        // 臆病：餌に近づくのを躊躇する
+                        if (this.personality === 'shy' && nearestDist < 100 && Math.random() < 0.3) {
+                            // 時々躊躇する
+                            this.speed = this.baseSpeed * 0.5;
+                        } else {
+                            this.targetX = nearestFood.x;
+                            this.targetY = nearestFood.y;
+                            this.speed = this.baseSpeed * 1.5;
+                        }
+                    } else {
+                        // ランダムな目標地点
+                        if (Math.hypot(this.targetX - this.x, this.targetY - this.y) < 50 || Math.random() < 0.01) {
+                            this.targetX = Math.random() * (canvas.width - 100) + 50;
+                            this.targetY = Math.random() * (canvas.height - 100) + 50;
+                        }
+                        this.speed = this.baseSpeed;
+                    }
                 }
 
                 // 目標に向かって移動
@@ -216,14 +310,19 @@
                     this.isHappy = false;
                 }
 
-                // 餌を食べる
+                // 餌を食べる（性格別の判定範囲）
+                const eatRange = this.personality === 'greedy' ? this.size * 0.8 :
+                                this.personality === 'clumsy' ? this.size * 0.3 :
+                                this.size * 0.5;
+
                 for (let i = foods.length - 1; i >= 0; i--) {
                     const food = foods[i];
                     const foodDist = Math.hypot(food.x - this.x, food.y - this.y);
-                    if (foodDist < this.size / 2) {
+                    if (foodDist < eatRange) {
                         foods.splice(i, 1);
                         happiness = Math.min(100, happiness + 10);
                         happinessSpan.textContent = happiness;
+                        this.eatenCount++;
                         this.makeHappy();
                         createParticles(food.x, food.y, '💚', 5);
                     }
@@ -248,7 +347,7 @@
 
                 // 尻尾
                 const tailWave = Math.sin(this.tailAngle) * 15;
-                ctx.fillStyle = '#6FB8E8';
+                ctx.fillStyle = this.colors.tail;
                 ctx.beginPath();
                 ctx.moveTo(-this.size * 0.7, 0);
                 ctx.quadraticCurveTo(-this.size * 1.2, tailWave - 20, -this.size * 1.4, tailWave - 25);
@@ -257,13 +356,13 @@
                 ctx.fill();
 
                 // 体
-                ctx.fillStyle = this.isHappy ? '#8FD8FF' : '#7FCDFF';
+                ctx.fillStyle = this.isHappy ? this.colors.bodyHappy : this.colors.body;
                 ctx.beginPath();
                 ctx.ellipse(0, 0, this.size * 0.8, this.size * 0.5, 0, 0, Math.PI * 2);
                 ctx.fill();
 
                 // ヒレ（上）
-                ctx.fillStyle = '#6FB8E8';
+                ctx.fillStyle = this.colors.tail;
                 ctx.beginPath();
                 ctx.moveTo(0, -this.size * 0.5);
                 ctx.lineTo(-10, -this.size * 0.8);
@@ -458,8 +557,10 @@
             }
         }
 
-        // 初期化
-        const shark = new Shark();
+        // 初期化 - 3匹の鮫を生成
+        sharks.push(new Shark('clumsy', canvas.width * 0.3, canvas.height * 0.3));
+        sharks.push(new Shark('greedy', canvas.width * 0.5, canvas.height * 0.5));
+        sharks.push(new Shark('shy', canvas.width * 0.7, canvas.height * 0.7));
 
         for (let i = 0; i < 20; i++) {
             bubbles.push(new Bubble());
@@ -480,9 +581,18 @@
         function handleInteraction(clientX, clientY) {
             const coords = getCanvasCoordinates(clientX, clientY);
 
-            if (shark.isClicked(coords.x, coords.y)) {
-                shark.makeHappy();
-            } else {
+            // いずれかの鮫がクリックされたかチェック
+            let clickedShark = false;
+            for (let shark of sharks) {
+                if (shark.isClicked(coords.x, coords.y)) {
+                    shark.makeHappy();
+                    clickedShark = true;
+                    break;
+                }
+            }
+
+            // 鮫がクリックされなければ餌を追加
+            if (!clickedShark) {
                 foods.push(new Food(coords.x, coords.y));
                 feedCount++;
                 feedCountSpan.textContent = feedCount;
@@ -547,9 +657,13 @@
                 food.draw();
             }
 
-            // 鮫
-            shark.update();
-            shark.draw();
+            // 鮫（全ての鮫を更新・描画）
+            for (let shark of sharks) {
+                shark.update();
+            }
+            for (let shark of sharks) {
+                shark.draw();
+            }
 
             // パーティクル
             for (let i = particles.length - 1; i >= 0; i--) {
