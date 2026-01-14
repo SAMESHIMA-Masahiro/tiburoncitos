@@ -204,6 +204,12 @@
                 this.cruisingAngle = this.angle;
                 this.wobbleOffset = 0; // ゆらゆらのオフセット
 
+                // ホバリングモード（一箇所でゆらゆら留まる）
+                this.isHovering = false;
+                this.hoveringTimer = 0;
+                this.hoveringCenter = { x: this.x, y: this.y }; // ホバリング中心点
+                this.hoveringOffset = 0; // ホバリング時の揺れ
+
                 // 満腹システム
                 this.recentEats = []; // 最近食べた餌のタイムスタンプ
                 this.isStuffed = false; // 満腹状態フラグ
@@ -330,10 +336,12 @@
                     this.targetY = this.y + Math.sin(fleeAngle) * 200;
                     this.speed = this.baseSpeed * 1.8;
                     this.isCruising = false; // 巡行中断
+                    this.isHovering = false; // ホバリング中断
                 } else if (this.fleeTimer > 0) {
                     this.fleeTimer--;
                     this.speed = this.baseSpeed * 1.5;
                     this.isCruising = false; // 巡行中断
+                    this.isHovering = false; // ホバリング中断
                 } else {
                     // 餌を探す（性格に応じた優先度付き）
                     let nearestFood = null;
@@ -395,9 +403,11 @@
                         this.confusionTimer--;
                         this.speed = this.baseSpeed * 0.8;
                         this.isCruising = false; // 巡行中断
+                        this.isHovering = false; // ホバリング中断
                     } else if (nearestFood && nearestDist < detectionRange) {
-                        // 餌を発見！巡行モード中断
+                        // 餌を発見！巡行・ホバリングモード中断
                         this.isCruising = false;
+                        this.isHovering = false;
 
                         // 好みの餌かチェック
                         const isFavoriteFood = (this.personality === 'shy' && nearestFood.type === 'slow') ||
@@ -417,6 +427,28 @@
                                 this.speed = this.baseSpeed * 1.5;
                             }
                         }
+                    } else if (this.isHovering) {
+                        // ホバリングモード：一箇所でゆらゆら留まる
+                        this.hoveringTimer--;
+                        this.hoveringOffset += 0.12;
+
+                        // 小さな円を描くように揺れる
+                        const hoverRadius = 8;
+                        this.targetX = this.hoveringCenter.x + Math.cos(this.hoveringOffset) * hoverRadius;
+                        this.targetY = this.hoveringCenter.y + Math.sin(this.hoveringOffset) * hoverRadius;
+
+                        // 角度もゆっくり揺れる
+                        this.targetAngle = this.cruisingAngle + Math.sin(this.hoveringOffset * 0.5) * 0.15;
+
+                        this.speed = this.baseSpeed * 0.3; // ゆっくり
+
+                        // タイマーが切れたら巡行モードに戻る
+                        if (this.hoveringTimer <= 0) {
+                            this.isHovering = false;
+                            this.isCruising = true;
+                            this.cruisingAngle = Math.random() * Math.PI * 2;
+                            this.cruisingTimer = Math.random() * 180 + 240; // 4-7秒
+                        }
                     } else {
                         // 巡行モード：まっすぐゆらゆら泳ぐ
                         if (!this.isCruising) {
@@ -429,11 +461,21 @@
                         this.cruisingTimer--;
                         this.wobbleOffset += 0.08;
 
-                        // タイマーが切れたらターン
+                        // タイマーが切れたらターンまたはホバリング
                         if (this.cruisingTimer <= 0) {
-                            // ターン！新しい方向へ
-                            this.cruisingAngle = Math.random() * Math.PI * 2;
-                            this.cruisingTimer = Math.random() * 180 + 240; // 4-7秒
+                            // 30%の確率でホバリング、70%でターン
+                            if (Math.random() < 0.3) {
+                                // ホバリングモードへ
+                                this.isHovering = true;
+                                this.isCruising = false;
+                                this.hoveringTimer = Math.random() * 120 + 120; // 2-4秒
+                                this.hoveringCenter = { x: this.x, y: this.y };
+                                this.hoveringOffset = 0;
+                            } else {
+                                // ターン！新しい方向へ
+                                this.cruisingAngle = Math.random() * Math.PI * 2;
+                                this.cruisingTimer = Math.random() * 180 + 240; // 4-7秒
+                            }
                         }
 
                         // ゆらゆら揺れながら進む（±5度程度）
@@ -468,6 +510,7 @@
                     this.cruisingAngle = centerAngle;
                     this.targetAngle = centerAngle;
                     this.isCruising = true;
+                    this.isHovering = false; // ホバリング中断
                     this.cruisingTimer = Math.random() * 180 + 240;
                 }
 
