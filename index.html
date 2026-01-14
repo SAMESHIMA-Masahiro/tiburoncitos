@@ -535,24 +535,25 @@
                 // 尾びれ（3D表現）
                 const tailWave = Math.sin(this.tailAngle) * 10;
 
-                // 尾びれ上葉（グラデーションで立体感）
-                const tailTopGrad = ctx.createLinearGradient(-bodyLength * 0.40, tailWave, -bodyLength * 0.60, tailWave - 60);
+                // 尾びれ上葉（グラデーションで立体感・幅広く）
+                const tailHeight = drawSize * 1.2;
+                const tailTopGrad = ctx.createLinearGradient(-bodyLength * 0.40, tailWave, -bodyLength * 0.60, tailWave - tailHeight);
                 tailTopGrad.addColorStop(0, this.colors.tail);
                 tailTopGrad.addColorStop(0.5, this.colors.body);
                 tailTopGrad.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
                 ctx.fillStyle = tailTopGrad;
                 ctx.beginPath();
                 ctx.moveTo(-bodyLength * 0.40, tailWave);
-                ctx.bezierCurveTo(-bodyLength * 0.47, tailWave - 22, -bodyLength * 0.55, tailWave - 48, -bodyLength * 0.60, tailWave - 60);
-                ctx.bezierCurveTo(-bodyLength * 0.58, tailWave - 56, -bodyLength * 0.53, tailWave - 42, -bodyLength * 0.48, tailWave - 28);
-                ctx.bezierCurveTo(-bodyLength * 0.44, tailWave - 16, -bodyLength * 0.41, tailWave - 8, -bodyLength * 0.40, tailWave - 4);
+                ctx.bezierCurveTo(-bodyLength * 0.47, tailWave - tailHeight * 0.36, -bodyLength * 0.55, tailWave - tailHeight * 0.80, -bodyLength * 0.60, tailWave - tailHeight);
+                ctx.bezierCurveTo(-bodyLength * 0.57, tailWave - tailHeight * 0.93, -bodyLength * 0.51, tailWave - tailHeight * 0.70, -bodyLength * 0.46, tailWave - tailHeight * 0.46);
+                ctx.bezierCurveTo(-bodyLength * 0.43, tailWave - tailHeight * 0.26, -bodyLength * 0.41, tailWave - tailHeight * 0.13, -bodyLength * 0.40, tailWave - tailHeight * 0.06);
                 ctx.closePath();
                 ctx.fill();
 
                 // 尾びれエッジハイライト（かっこいい光沢）
                 ctx.save();
                 ctx.globalAlpha = 0.7;
-                const tailEdgeGrad = ctx.createLinearGradient(-bodyLength * 0.40, tailWave, -bodyLength * 0.60, tailWave - 60);
+                const tailEdgeGrad = ctx.createLinearGradient(-bodyLength * 0.40, tailWave, -bodyLength * 0.60, tailWave - tailHeight);
                 tailEdgeGrad.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
                 tailEdgeGrad.addColorStop(0.5, 'rgba(200, 220, 255, 0.9)');
                 tailEdgeGrad.addColorStop(1, 'rgba(150, 180, 255, 0.5)');
@@ -560,7 +561,7 @@
                 ctx.lineWidth = 2.5;
                 ctx.beginPath();
                 ctx.moveTo(-bodyLength * 0.40, tailWave);
-                ctx.bezierCurveTo(-bodyLength * 0.47, tailWave - 22, -bodyLength * 0.55, tailWave - 48, -bodyLength * 0.60, tailWave - 60);
+                ctx.bezierCurveTo(-bodyLength * 0.47, tailWave - tailHeight * 0.36, -bodyLength * 0.55, tailWave - tailHeight * 0.80, -bodyLength * 0.60, tailWave - tailHeight);
                 ctx.stroke();
                 ctx.restore();
 
@@ -568,28 +569,30 @@
                 if (this.speed > 0.5) {
                     ctx.save();
                     ctx.globalAlpha = 0.5;
-                    const tailGlow = ctx.createRadialGradient(-bodyLength * 0.60, tailWave - 60, 0, -bodyLength * 0.60, tailWave - 60, 20);
+                    const glowSize = drawSize * 0.4;
+                    const tailGlow = ctx.createRadialGradient(-bodyLength * 0.60, tailWave - tailHeight, 0, -bodyLength * 0.60, tailWave - tailHeight, glowSize);
                     tailGlow.addColorStop(0, 'rgba(150, 200, 255, 0.8)');
                     tailGlow.addColorStop(0.5, 'rgba(100, 160, 255, 0.4)');
                     tailGlow.addColorStop(1, 'rgba(50, 120, 255, 0)');
                     ctx.fillStyle = tailGlow;
                     ctx.beginPath();
-                    ctx.arc(-bodyLength * 0.60, tailWave - 60, 20, 0, Math.PI * 2);
+                    ctx.arc(-bodyLength * 0.60, tailWave - tailHeight, glowSize, 0, Math.PI * 2);
                     ctx.fill();
                     ctx.restore();
                 }
 
-                // 尾びれ下葉
-                const tailBottomGrad = ctx.createLinearGradient(-bodyLength * 0.40, tailWave, -bodyLength * 0.53, tailWave + 22);
+                // 尾びれ下葉（幅広く）
+                const tailBottomHeight = drawSize * 0.44;
+                const tailBottomGrad = ctx.createLinearGradient(-bodyLength * 0.40, tailWave, -bodyLength * 0.53, tailWave + tailBottomHeight);
                 tailBottomGrad.addColorStop(0, this.colors.tail);
                 tailBottomGrad.addColorStop(0.6, this.colors.body);
                 tailBottomGrad.addColorStop(1, 'rgba(255, 255, 255, 0.4)');
                 ctx.fillStyle = tailBottomGrad;
                 ctx.beginPath();
                 ctx.moveTo(-bodyLength * 0.40, tailWave);
-                ctx.bezierCurveTo(-bodyLength * 0.45, tailWave + 10, -bodyLength * 0.50, tailWave + 18, -bodyLength * 0.53, tailWave + 22);
-                ctx.bezierCurveTo(-bodyLength * 0.51, tailWave + 19, -bodyLength * 0.48, tailWave + 14, -bodyLength * 0.44, tailWave + 8);
-                ctx.bezierCurveTo(-bodyLength * 0.42, tailWave + 5, -bodyLength * 0.40, tailWave + 3, -bodyLength * 0.40, tailWave + 2);
+                ctx.bezierCurveTo(-bodyLength * 0.45, tailWave + tailBottomHeight * 0.45, -bodyLength * 0.50, tailWave + tailBottomHeight * 0.82, -bodyLength * 0.53, tailWave + tailBottomHeight);
+                ctx.bezierCurveTo(-bodyLength * 0.51, tailWave + tailBottomHeight * 0.86, -bodyLength * 0.48, tailWave + tailBottomHeight * 0.64, -bodyLength * 0.44, tailWave + tailBottomHeight * 0.36);
+                ctx.bezierCurveTo(-bodyLength * 0.42, tailWave + tailBottomHeight * 0.23, -bodyLength * 0.40, tailWave + tailBottomHeight * 0.14, -bodyLength * 0.40, tailWave + tailBottomHeight * 0.09);
                 ctx.closePath();
                 ctx.fill();
 
@@ -814,13 +817,15 @@
                 ctx.fill();
                 ctx.restore();
 
-                // 左胸びれ（奥側 - 半透明で奥行き表現）
+                // 左胸びれ（奥側 - 半透明で奥行き表現・幅広く）
                 ctx.save();
                 ctx.globalAlpha = 0.5;
                 ctx.translate(bodyLength * 0.15, -drawSize * 0.42);
                 ctx.rotate(-0.7);
 
-                const leftPectoralGrad = ctx.createLinearGradient(0, 0, 24, -50);
+                const pectoralWidth = drawSize * 0.48;
+                const pectoralLength = drawSize * 1.0;
+                const leftPectoralGrad = ctx.createLinearGradient(0, 0, pectoralWidth, -pectoralLength);
                 leftPectoralGrad.addColorStop(0, this.colors.tail);
                 leftPectoralGrad.addColorStop(0.5, this.colors.body);
                 leftPectoralGrad.addColorStop(1, 'rgba(0, 0, 0, 0.2)');
@@ -828,9 +833,9 @@
 
                 ctx.beginPath();
                 ctx.moveTo(0, 0);
-                ctx.bezierCurveTo(10, -16, 20, -36, 24, -50);
-                ctx.bezierCurveTo(22, -48, 16, -34, 8, -20);
-                ctx.bezierCurveTo(4, -11, 2, -5, 0, -2);
+                ctx.bezierCurveTo(pectoralWidth * 0.42, -pectoralLength * 0.32, pectoralWidth * 0.83, -pectoralLength * 0.72, pectoralWidth, -pectoralLength);
+                ctx.bezierCurveTo(pectoralWidth * 0.92, -pectoralLength * 0.96, pectoralWidth * 0.67, -pectoralLength * 0.68, pectoralWidth * 0.33, -pectoralLength * 0.40);
+                ctx.bezierCurveTo(pectoralWidth * 0.17, -pectoralLength * 0.22, pectoralWidth * 0.08, -pectoralLength * 0.10, 0, -pectoralLength * 0.04);
                 ctx.closePath();
                 ctx.fill();
 
@@ -839,16 +844,16 @@
                 ctx.lineWidth = 1.5;
                 ctx.beginPath();
                 ctx.moveTo(0, 0);
-                ctx.bezierCurveTo(10, -16, 20, -36, 24, -50);
+                ctx.bezierCurveTo(pectoralWidth * 0.42, -pectoralLength * 0.32, pectoralWidth * 0.83, -pectoralLength * 0.72, pectoralWidth, -pectoralLength);
                 ctx.stroke();
                 ctx.restore();
 
-                // 右胸びれ（手前側 - はっきり）
+                // 右胸びれ（手前側 - はっきり・幅広く）
                 ctx.save();
                 ctx.translate(bodyLength * 0.15, drawSize * 0.42);
                 ctx.rotate(0.7);
 
-                const rightPectoralGrad = ctx.createLinearGradient(0, 0, 24, 50);
+                const rightPectoralGrad = ctx.createLinearGradient(0, 0, pectoralWidth, pectoralLength);
                 rightPectoralGrad.addColorStop(0, this.colors.tail);
                 rightPectoralGrad.addColorStop(0.4, this.colors.body);
                 rightPectoralGrad.addColorStop(1, 'rgba(0, 0, 0, 0.25)');
@@ -856,14 +861,14 @@
 
                 ctx.beginPath();
                 ctx.moveTo(0, 0);
-                ctx.bezierCurveTo(10, 16, 20, 36, 24, 50);
-                ctx.bezierCurveTo(22, 48, 16, 34, 8, 20);
-                ctx.bezierCurveTo(4, 11, 2, 5, 0, 2);
+                ctx.bezierCurveTo(pectoralWidth * 0.42, pectoralLength * 0.32, pectoralWidth * 0.83, pectoralLength * 0.72, pectoralWidth, pectoralLength);
+                ctx.bezierCurveTo(pectoralWidth * 0.92, pectoralLength * 0.96, pectoralWidth * 0.67, pectoralLength * 0.68, pectoralWidth * 0.33, pectoralLength * 0.40);
+                ctx.bezierCurveTo(pectoralWidth * 0.17, pectoralLength * 0.22, pectoralWidth * 0.08, pectoralLength * 0.10, 0, pectoralLength * 0.04);
                 ctx.closePath();
                 ctx.fill();
 
                 // 右胸びれハイライト（かっこいい光沢）
-                const pectoralEdge = ctx.createLinearGradient(0, 0, 24, 50);
+                const pectoralEdge = ctx.createLinearGradient(0, 0, pectoralWidth, pectoralLength);
                 pectoralEdge.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
                 pectoralEdge.addColorStop(0.5, 'rgba(200, 220, 255, 0.8)');
                 pectoralEdge.addColorStop(1, 'rgba(150, 180, 255, 0.5)');
@@ -871,36 +876,39 @@
                 ctx.lineWidth = 2.5;
                 ctx.beginPath();
                 ctx.moveTo(0, 0);
-                ctx.bezierCurveTo(10, 16, 20, 36, 24, 50);
+                ctx.bezierCurveTo(pectoralWidth * 0.42, pectoralLength * 0.32, pectoralWidth * 0.83, pectoralLength * 0.72, pectoralWidth, pectoralLength);
                 ctx.stroke();
 
                 // 右胸びれの影（体に落ちる）
                 ctx.globalAlpha = 0.2;
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
                 ctx.beginPath();
-                ctx.ellipse(-5, -5, 12, 8, 0, 0, Math.PI * 2);
+                ctx.ellipse(-drawSize * 0.10, -drawSize * 0.10, drawSize * 0.24, drawSize * 0.16, 0, 0, Math.PI * 2);
                 ctx.fill();
 
                 // かっこいい要素: 胸びれ先端の光
                 if (this.speed > 0.4) {
                     ctx.globalAlpha = 0.4;
-                    const finTipGlow = ctx.createRadialGradient(24, 50, 0, 24, 50, 12);
+                    const finGlowSize = drawSize * 0.24;
+                    const finTipGlow = ctx.createRadialGradient(pectoralWidth, pectoralLength, 0, pectoralWidth, pectoralLength, finGlowSize);
                     finTipGlow.addColorStop(0, 'rgba(150, 200, 255, 0.7)');
                     finTipGlow.addColorStop(1, 'rgba(100, 160, 255, 0)');
                     ctx.fillStyle = finTipGlow;
                     ctx.beginPath();
-                    ctx.arc(24, 50, 12, 0, Math.PI * 2);
+                    ctx.arc(pectoralWidth, pectoralLength, finGlowSize, 0, Math.PI * 2);
                     ctx.fill();
                 }
                 ctx.restore();
 
-                // 左腹びれ（奥側 - 半透明）
+                // 左腹びれ（奥側 - 半透明・幅広く）
                 ctx.save();
                 ctx.globalAlpha = 0.5;
                 ctx.translate(-bodyLength * 0.10, -drawSize * 0.36);
                 ctx.rotate(-0.5);
 
-                const leftPelvicGrad = ctx.createLinearGradient(0, 0, 9, -18);
+                const pelvicWidth = drawSize * 0.18;
+                const pelvicLength = drawSize * 0.36;
+                const leftPelvicGrad = ctx.createLinearGradient(0, 0, pelvicWidth, -pelvicLength);
                 leftPelvicGrad.addColorStop(0, this.colors.tail);
                 leftPelvicGrad.addColorStop(0.6, this.colors.body);
                 leftPelvicGrad.addColorStop(1, 'rgba(255, 255, 255, 0.3)');
@@ -908,18 +916,18 @@
 
                 ctx.beginPath();
                 ctx.moveTo(0, 0);
-                ctx.bezierCurveTo(4, -8, 7, -14, 9, -18);
-                ctx.bezierCurveTo(7, -16, 4, -10, 0, -3);
+                ctx.bezierCurveTo(pelvicWidth * 0.44, -pelvicLength * 0.44, pelvicWidth * 0.78, -pelvicLength * 0.78, pelvicWidth, -pelvicLength);
+                ctx.bezierCurveTo(pelvicWidth * 0.78, -pelvicLength * 0.89, pelvicWidth * 0.44, -pelvicLength * 0.56, 0, -pelvicLength * 0.17);
                 ctx.closePath();
                 ctx.fill();
                 ctx.restore();
 
-                // 右腹びれ（手前側）
+                // 右腹びれ（手前側・幅広く）
                 ctx.save();
                 ctx.translate(-bodyLength * 0.10, drawSize * 0.36);
                 ctx.rotate(0.5);
 
-                const rightPelvicGrad = ctx.createLinearGradient(0, 0, 9, 18);
+                const rightPelvicGrad = ctx.createLinearGradient(0, 0, pelvicWidth, pelvicLength);
                 rightPelvicGrad.addColorStop(0, this.colors.tail);
                 rightPelvicGrad.addColorStop(0.6, this.colors.body);
                 rightPelvicGrad.addColorStop(1, 'rgba(255, 255, 255, 0.4)');
@@ -927,8 +935,8 @@
 
                 ctx.beginPath();
                 ctx.moveTo(0, 0);
-                ctx.bezierCurveTo(4, 8, 7, 14, 9, 18);
-                ctx.bezierCurveTo(7, 16, 4, 10, 0, 3);
+                ctx.bezierCurveTo(pelvicWidth * 0.44, pelvicLength * 0.44, pelvicWidth * 0.78, pelvicLength * 0.78, pelvicWidth, pelvicLength);
+                ctx.bezierCurveTo(pelvicWidth * 0.78, pelvicLength * 0.89, pelvicWidth * 0.44, pelvicLength * 0.56, 0, pelvicLength * 0.17);
                 ctx.closePath();
                 ctx.fill();
 
@@ -937,7 +945,7 @@
                 ctx.lineWidth = 1;
                 ctx.beginPath();
                 ctx.moveTo(0, 0);
-                ctx.bezierCurveTo(4, 8, 7, 14, 9, 18);
+                ctx.bezierCurveTo(pelvicWidth * 0.44, pelvicLength * 0.44, pelvicWidth * 0.78, pelvicLength * 0.78, pelvicWidth, pelvicLength);
                 ctx.stroke();
                 ctx.restore();
 
