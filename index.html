@@ -596,19 +596,19 @@
                 // 角度を正規化（0〜2π）
                 const normalizedAngle = ((this.angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
 
-                // 正面・後ろ向きの判定と立体感のためのスケール調整
+                // 正面・後ろ向きの判定と立体感のためのスケール調整（控えめに）
                 let scaleX = 1.0;
                 let scaleY = 1.0;
 
                 // 正面向き（-45度〜45度、315度〜360度）
                 if (normalizedAngle < Math.PI / 4 || normalizedAngle > Math.PI * 7 / 4) {
-                    scaleX = 0.5; // 体を短く
-                    scaleY = 1.5; // 幅を広く（サメらしい丸みに）
+                    scaleX = 0.55; // 体を短く
+                    scaleY = 1.2; // 幅を少し広く（控えめに）
                 }
                 // 後ろ向き（135度〜225度）
                 else if (normalizedAngle > Math.PI * 3 / 4 && normalizedAngle < Math.PI * 5 / 4) {
-                    scaleX = 0.55; // 体を短く
-                    scaleY = 1.45; // 幅を広く（サメらしい丸みに）
+                    scaleX = 0.60; // 体を短く
+                    scaleY = 1.15; // 幅を少し広く（控えめに）
                 }
 
                 ctx.scale(scaleX, scaleY);
@@ -741,12 +741,12 @@
                     ctx.bezierCurveTo(-bodyLength * 0.38, drawSize * 0.28, -bodyLength * 0.22, drawSize * 0.48, 0, drawSize * 0.50);
                     ctx.bezierCurveTo(bodyLength * 0.28, drawSize * 0.48, bodyLength * 0.45, drawSize * 0.40, bodyLength * 0.50, 0);
                 } else {
-                    // デフォルメされた鮫らしい流線型
+                    // デフォルメされた鮫らしい流線型（細身に）
                     ctx.moveTo(bodyLength * 0.50, 0);
-                    ctx.bezierCurveTo(bodyLength * 0.45, -drawSize * 0.38, bodyLength * 0.28, -drawSize * 0.48, 0, -drawSize * 0.50);
-                    ctx.bezierCurveTo(-bodyLength * 0.22, -drawSize * 0.48, -bodyLength * 0.38, -drawSize * 0.28, -bodyLength * 0.42, 0);
-                    ctx.bezierCurveTo(-bodyLength * 0.38, drawSize * 0.28, -bodyLength * 0.22, drawSize * 0.48, 0, drawSize * 0.50);
-                    ctx.bezierCurveTo(bodyLength * 0.28, drawSize * 0.48, bodyLength * 0.45, drawSize * 0.38, bodyLength * 0.50, 0);
+                    ctx.bezierCurveTo(bodyLength * 0.45, -drawSize * 0.35, bodyLength * 0.28, -drawSize * 0.43, 0, -drawSize * 0.45);
+                    ctx.bezierCurveTo(-bodyLength * 0.22, -drawSize * 0.43, -bodyLength * 0.38, -drawSize * 0.26, -bodyLength * 0.42, 0);
+                    ctx.bezierCurveTo(-bodyLength * 0.38, drawSize * 0.26, -bodyLength * 0.22, drawSize * 0.43, 0, drawSize * 0.45);
+                    ctx.bezierCurveTo(bodyLength * 0.28, drawSize * 0.43, bodyLength * 0.45, drawSize * 0.35, bodyLength * 0.50, 0);
                 }
                 ctx.closePath();
                 ctx.fill();
@@ -760,7 +760,7 @@
                 if (this.isStuffed) {
                     ctx.ellipse(bodyLength * 0.08, -drawSize * 0.25, bodyLength * 0.30, drawSize * 0.30, 0, 0, Math.PI * 2);
                 } else {
-                    ctx.ellipse(bodyLength * 0.08, -drawSize * 0.20, bodyLength * 0.26, drawSize * 0.24, 0, 0, Math.PI * 2);
+                    ctx.ellipse(bodyLength * 0.08, -drawSize * 0.18, bodyLength * 0.26, drawSize * 0.22, 0, 0, Math.PI * 2);
                 }
                 ctx.fill();
 
@@ -774,12 +774,12 @@
                 if (this.isStuffed) {
                     ctx.ellipse(bodyLength * 0.15, -drawSize * 0.05, bodyLength * 0.28, drawSize * 0.35, 0, 0, Math.PI * 2);
                 } else {
-                    ctx.ellipse(bodyLength * 0.15, -drawSize * 0.05, bodyLength * 0.24, drawSize * 0.28, 0, 0, Math.PI * 2);
+                    ctx.ellipse(bodyLength * 0.15, -drawSize * 0.05, bodyLength * 0.24, drawSize * 0.25, 0, 0, Math.PI * 2);
                 }
                 ctx.fill();
 
                 // 3D立体感レイヤー3: 腹部のハイライト（白い下側）
-                const bellyGrad = ctx.createLinearGradient(0, drawSize * 0.10, 0, drawSize * 0.50);
+                const bellyGrad = ctx.createLinearGradient(0, drawSize * 0.10, 0, drawSize * 0.45);
                 bellyGrad.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
                 bellyGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.7)');
                 bellyGrad.addColorStop(1, 'rgba(255, 255, 255, 0.85)');
@@ -791,8 +791,8 @@
                     ctx.bezierCurveTo(-bodyLength * 0.12, drawSize * 0.34, bodyLength * 0.15, drawSize * 0.30, bodyLength * 0.40, drawSize * 0.10);
                 } else {
                     ctx.moveTo(bodyLength * 0.42, drawSize * 0.08);
-                    ctx.bezierCurveTo(bodyLength * 0.25, drawSize * 0.34, -bodyLength * 0.05, drawSize * 0.40, -bodyLength * 0.28, drawSize * 0.16);
-                    ctx.bezierCurveTo(-bodyLength * 0.10, drawSize * 0.30, bodyLength * 0.20, drawSize * 0.24, bodyLength * 0.42, drawSize * 0.08);
+                    ctx.bezierCurveTo(bodyLength * 0.25, drawSize * 0.30, -bodyLength * 0.05, drawSize * 0.36, -bodyLength * 0.28, drawSize * 0.14);
+                    ctx.bezierCurveTo(-bodyLength * 0.10, drawSize * 0.26, bodyLength * 0.20, drawSize * 0.22, bodyLength * 0.42, drawSize * 0.08);
                 }
                 ctx.closePath();
                 ctx.fill();
