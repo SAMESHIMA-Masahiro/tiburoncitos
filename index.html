@@ -20,17 +20,20 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
+            height: 100vh;
+            width: 100vw;
             overflow: hidden;
+            margin: 0;
+            padding: 0;
         }
 
         #gameContainer {
             position: relative;
             box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
-            border-radius: 20px;
+            border-radius: 0;
             overflow: hidden;
-            max-width: 95vw;
-            max-height: 85vh;
+            width: 100vw;
+            height: 100vh;
         }
 
         #gameCanvas {
@@ -40,7 +43,7 @@
                 rgba(0, 50, 150, 0.5));
             cursor: pointer;
             width: 100%;
-            height: auto;
+            height: 100%;
             touch-action: none;
         }
 
@@ -90,17 +93,21 @@
 
         .title {
             position: absolute;
-            top: -60px;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
             color: white;
-            font-size: 32px;
+            font-size: 42px;
             font-weight: bold;
             text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.7);
+            z-index: 15;
+            pointer-events: none;
         }
 
         @media (max-width: 600px) {
             .title {
-                font-size: 24px;
-                top: -45px;
+                font-size: 28px;
+                top: 15px;
             }
         }
 
@@ -145,7 +152,7 @@
 <body>
     <div id="gameContainer">
         <h1 class="title">コザメ🦈</h1>
-        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <canvas id="gameCanvas" width="1920" height="1080"></canvas>
         <div id="ui">
             <div>満腹度: <span id="happiness">100</span>%</div>
             <div>餌をあげた回数: <span id="feedCount">0</span></div>
@@ -175,7 +182,7 @@
             constructor(personality, startX, startY) {
                 this.x = startX || canvas.width / 2;
                 this.y = startY || canvas.height / 2;
-                this.size = 50;
+                this.size = 40; // より引き締まったサイズ
                 this.angle = Math.random() * Math.PI * 2;
                 this.targetAngle = 0;
                 this.personality = personality; // 'clumsy', 'greedy', 'shy'
@@ -194,7 +201,10 @@
                 // 満腹システム
                 this.recentEats = []; // 最近食べた餌のタイムスタンプ
                 this.isStuffed = false; // 満腹状態フラグ
-                this.stuffedTimer = 0; // 満腹状態のタイマー（3600フレーム = 60秒 at 60fps）
+                this.stuffedTimer = 0; // 満腹状態のタイマー（1800フレーム = 30秒 at 60fps）
+                this.isStruggling = false; // ジタバタ状態フラグ
+                this.strugglingTimer = 0; // ジタバタタイマー（300フレーム = 5秒 at 60fps）
+                this.strugglingOffset = { x: 0, y: 0 }; // ジタバタ時の揺れオフセット
 
                 // 性格別の色
                 this.colors = this.getColors();
@@ -239,11 +249,44 @@
             }
 
             update() {
-                // 満腹状態の処理
+                // ジタバタ状態の処理
+                if (this.isStruggling) {
+                    this.strugglingTimer--;
+
+                    // 激しく揺れる
+                    const intensity = 8;
+                    this.strugglingOffset.x = (Math.random() - 0.5) * intensity * 2;
+                    this.strugglingOffset.y = (Math.random() - 0.5) * intensity * 2;
+
+                    // ランダムに方向転換
+                    if (Math.random() < 0.3) {
+                        this.targetAngle = Math.random() * Math.PI * 2;
+                    }
+
+                    // パーティクルを定期的に生成
+                    if (this.strugglingTimer % 20 === 0) {
+                        createParticles(this.x, this.y, '💦', 2);
+                    }
+
+                    // 5秒経過で回復
+                    if (this.strugglingTimer <= 0) {
+                        this.isStruggling = false;
+                        this.isStuffed = false;
+                        this.recentEats = [];
+                        this.strugglingOffset = { x: 0, y: 0 };
+                        createParticles(this.x, this.y - 40, '✨', 8);
+                        createParticles(this.x, this.y, '💚', 5);
+                    }
+
+                    // ジタバタ中は通常の動きをスキップ
+                    return;
+                }
+
+                // 満腹状態の処理（タッチされない場合）
                 if (this.isStuffed) {
                     this.stuffedTimer--;
                     if (this.stuffedTimer <= 0) {
-                        // 回復：痩せる
+                        // 回復：痩せる（30秒経過）
                         this.isStuffed = false;
                         this.recentEats = [];
                         createParticles(this.x, this.y - 40, '✨', 5);
@@ -407,9 +450,9 @@
                 }
 
                 // 餌を食べる（性格別の判定範囲）
-                const eatRange = this.personality === 'greedy' ? this.size * 0.8 :
-                                this.personality === 'clumsy' ? this.size * 0.3 :
-                                this.size * 0.5;
+                const eatRange = this.personality === 'greedy' ? this.size * 1.2 :
+                                this.personality === 'clumsy' ? this.size * 0.5 :
+                                this.size * 0.8;
 
                 for (let i = foods.length - 1; i >= 0; i--) {
                     const food = foods[i];
@@ -432,7 +475,7 @@
                         // 30秒以内に20個以上食べたら満腹状態に
                         if (this.recentEats.length >= 20 && !this.isStuffed) {
                             this.isStuffed = true;
-                            this.stuffedTimer = 3600; // 60秒 at 60fps
+                            this.stuffedTimer = 1800; // 30秒 at 60fps
                             createParticles(this.x, this.y, '💤', 8);
                         }
                     }
@@ -440,118 +483,806 @@
             }
 
             makeHappy() {
-                this.happyTimer = 60;
-                createParticles(this.x, this.y - 40, '💙', 3);
+                // 満腹状態の場合、ジタバタして回復
+                if (this.isStuffed) {
+                    this.isStruggling = true;
+                    this.strugglingTimer = 300; // 5秒 @ 60fps
+                    createParticles(this.x, this.y, '💦', 10);
+                    createParticles(this.x, this.y, '❗', 3);
+                } else {
+                    this.happyTimer = 60;
+                    createParticles(this.x, this.y - 40, '💙', 3);
+                }
             }
 
             draw() {
                 ctx.save();
-                ctx.translate(this.x, this.y);
+                // ジタバタ中は揺れを追加
+                const offsetX = this.isStruggling ? this.strugglingOffset.x : 0;
+                const offsetY = this.isStruggling ? this.strugglingOffset.y : 0;
+                ctx.translate(this.x + offsetX, this.y + offsetY);
                 ctx.rotate(this.angle);
 
                 // 満腹状態の時はサイズを大きくする
-                const sizeMultiplier = this.isStuffed ? 1.5 : 1.0;
+                const sizeMultiplier = this.isStuffed ? 1.35 : 1.0;
                 const drawSize = this.size * sizeMultiplier;
+                const bodyLength = drawSize * 3.5; // より細長く精悍に
 
-                // 影
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                // 影（3D的な柔らかい影）
+                ctx.save();
+                ctx.globalAlpha = 0.2;
+                const shadowGradient = ctx.createRadialGradient(8, 14, 0, 8, 14, bodyLength * 0.5);
+                shadowGradient.addColorStop(0, 'rgba(0, 0, 0, 0.3)');
+                shadowGradient.addColorStop(0.6, 'rgba(0, 0, 0, 0.15)');
+                shadowGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                ctx.fillStyle = shadowGradient;
                 ctx.beginPath();
-                ctx.ellipse(5, 10, drawSize * 0.8, drawSize * 0.6, 0, 0, Math.PI * 2);
+                ctx.ellipse(8, 14, bodyLength * 0.48, drawSize * 0.38, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                // 尾柄（3Dグラデーション）
+                const caudlePeducleGrad = ctx.createLinearGradient(0, -drawSize * 0.20, 0, drawSize * 0.20);
+                caudlePeducleGrad.addColorStop(0, 'rgba(0, 0, 0, 0.2)');
+                caudlePeducleGrad.addColorStop(0.3, this.colors.body);
+                caudlePeducleGrad.addColorStop(0.7, this.colors.body);
+                caudlePeducleGrad.addColorStop(1, 'rgba(255, 255, 255, 0.3)');
+                ctx.fillStyle = caudlePeducleGrad;
+                ctx.beginPath();
+                ctx.ellipse(-bodyLength * 0.40, 0, drawSize * 0.14, drawSize * 0.20, 0, 0, Math.PI * 2);
                 ctx.fill();
 
-                // 尻尾
-                const tailWave = Math.sin(this.tailAngle) * 15;
-                ctx.fillStyle = this.colors.tail;
-                ctx.beginPath();
-                ctx.moveTo(-drawSize * 0.7, 0);
-                ctx.quadraticCurveTo(-drawSize * 1.2, tailWave - 20, -drawSize * 1.4, tailWave - 25);
-                ctx.quadraticCurveTo(-drawSize * 1.3, tailWave, -drawSize * 1.4, tailWave + 25);
-                ctx.quadraticCurveTo(-drawSize * 1.2, tailWave + 20, -drawSize * 0.7, 0);
-                ctx.fill();
+                // 尾びれ（3D表現）
+                const tailWave = Math.sin(this.tailAngle) * 10;
 
-                // 体（満腹時は丸く）
-                ctx.fillStyle = this.isHappy ? this.colors.bodyHappy : this.colors.body;
+                // 尾びれ上葉（グラデーションで立体感）
+                const tailTopGrad = ctx.createLinearGradient(-bodyLength * 0.40, tailWave, -bodyLength * 0.60, tailWave - 60);
+                tailTopGrad.addColorStop(0, this.colors.tail);
+                tailTopGrad.addColorStop(0.5, this.colors.body);
+                tailTopGrad.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
+                ctx.fillStyle = tailTopGrad;
                 ctx.beginPath();
-                if (this.isStuffed) {
-                    // 満腹時は丸く太る
-                    ctx.ellipse(0, 0, drawSize * 0.9, drawSize * 0.7, 0, 0, Math.PI * 2);
-                } else {
-                    ctx.ellipse(0, 0, drawSize * 0.8, drawSize * 0.5, 0, 0, Math.PI * 2);
-                }
-                ctx.fill();
-
-                // ヒレ（上）
-                ctx.fillStyle = this.colors.tail;
-                ctx.beginPath();
-                ctx.moveTo(0, -drawSize * 0.5);
-                ctx.lineTo(-10, -drawSize * 0.8);
-                ctx.lineTo(10, -drawSize * 0.8);
+                ctx.moveTo(-bodyLength * 0.40, tailWave);
+                ctx.bezierCurveTo(-bodyLength * 0.47, tailWave - 22, -bodyLength * 0.55, tailWave - 48, -bodyLength * 0.60, tailWave - 60);
+                ctx.bezierCurveTo(-bodyLength * 0.58, tailWave - 56, -bodyLength * 0.53, tailWave - 42, -bodyLength * 0.48, tailWave - 28);
+                ctx.bezierCurveTo(-bodyLength * 0.44, tailWave - 16, -bodyLength * 0.41, tailWave - 8, -bodyLength * 0.40, tailWave - 4);
                 ctx.closePath();
                 ctx.fill();
 
-                // ヒレ（横）
+                // 尾びれエッジハイライト（かっこいい光沢）
+                ctx.save();
+                ctx.globalAlpha = 0.7;
+                const tailEdgeGrad = ctx.createLinearGradient(-bodyLength * 0.40, tailWave, -bodyLength * 0.60, tailWave - 60);
+                tailEdgeGrad.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
+                tailEdgeGrad.addColorStop(0.5, 'rgba(200, 220, 255, 0.9)');
+                tailEdgeGrad.addColorStop(1, 'rgba(150, 180, 255, 0.5)');
+                ctx.strokeStyle = tailEdgeGrad;
+                ctx.lineWidth = 2.5;
                 ctx.beginPath();
-                ctx.ellipse(-drawSize * 0.3, drawSize * 0.3, 20, 10, -0.5, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.moveTo(-bodyLength * 0.40, tailWave);
+                ctx.bezierCurveTo(-bodyLength * 0.47, tailWave - 22, -bodyLength * 0.55, tailWave - 48, -bodyLength * 0.60, tailWave - 60);
+                ctx.stroke();
+                ctx.restore();
+
+                // かっこいい要素: 尾びれ先端の光の筋（動いている時）
+                if (this.speed > 0.5) {
+                    ctx.save();
+                    ctx.globalAlpha = 0.5;
+                    const tailGlow = ctx.createRadialGradient(-bodyLength * 0.60, tailWave - 60, 0, -bodyLength * 0.60, tailWave - 60, 20);
+                    tailGlow.addColorStop(0, 'rgba(150, 200, 255, 0.8)');
+                    tailGlow.addColorStop(0.5, 'rgba(100, 160, 255, 0.4)');
+                    tailGlow.addColorStop(1, 'rgba(50, 120, 255, 0)');
+                    ctx.fillStyle = tailGlow;
+                    ctx.beginPath();
+                    ctx.arc(-bodyLength * 0.60, tailWave - 60, 20, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+
+                // 尾びれ下葉
+                const tailBottomGrad = ctx.createLinearGradient(-bodyLength * 0.40, tailWave, -bodyLength * 0.53, tailWave + 22);
+                tailBottomGrad.addColorStop(0, this.colors.tail);
+                tailBottomGrad.addColorStop(0.6, this.colors.body);
+                tailBottomGrad.addColorStop(1, 'rgba(255, 255, 255, 0.4)');
+                ctx.fillStyle = tailBottomGrad;
                 ctx.beginPath();
-                ctx.ellipse(-drawSize * 0.3, -drawSize * 0.3, 20, 10, 0.5, 0, Math.PI * 2);
+                ctx.moveTo(-bodyLength * 0.40, tailWave);
+                ctx.bezierCurveTo(-bodyLength * 0.45, tailWave + 10, -bodyLength * 0.50, tailWave + 18, -bodyLength * 0.53, tailWave + 22);
+                ctx.bezierCurveTo(-bodyLength * 0.51, tailWave + 19, -bodyLength * 0.48, tailWave + 14, -bodyLength * 0.44, tailWave + 8);
+                ctx.bezierCurveTo(-bodyLength * 0.42, tailWave + 5, -bodyLength * 0.40, tailWave + 3, -bodyLength * 0.40, tailWave + 2);
+                ctx.closePath();
                 ctx.fill();
 
-                // 目
-                const eyeX = drawSize * 0.3;
-                const eyeY = -10;
-
-                // 白目
-                ctx.fillStyle = 'white';
+                // 第二背びれ（3Dグラデーション・かっこよく）
+                const secondDorsalGrad = ctx.createLinearGradient(-bodyLength * 0.28, -drawSize * 0.20, -bodyLength * 0.24, -drawSize * 0.48);
+                secondDorsalGrad.addColorStop(0, this.colors.tail);
+                secondDorsalGrad.addColorStop(0.4, this.colors.body);
+                secondDorsalGrad.addColorStop(1, 'rgba(50, 50, 80, 0.35)');
+                ctx.fillStyle = secondDorsalGrad;
                 ctx.beginPath();
-                ctx.ellipse(eyeX, eyeY, 12, 12 * this.eyeScale, 0, 0, Math.PI * 2);
+                ctx.moveTo(-bodyLength * 0.28, -drawSize * 0.20);
+                ctx.bezierCurveTo(-bodyLength * 0.27, -drawSize * 0.33, -bodyLength * 0.255, -drawSize * 0.44, -bodyLength * 0.24, -drawSize * 0.48);
+                ctx.bezierCurveTo(-bodyLength * 0.23, -drawSize * 0.45, -bodyLength * 0.22, -drawSize * 0.35, -bodyLength * 0.21, -drawSize * 0.22);
+                ctx.closePath();
                 ctx.fill();
 
-                // 黒目
-                ctx.fillStyle = 'black';
+                // 第二背びれのエッジハイライト
+                ctx.save();
+                ctx.globalAlpha = 0.7;
+                ctx.strokeStyle = 'rgba(200, 220, 255, 0.8)';
+                ctx.lineWidth = 1.5;
                 ctx.beginPath();
-                ctx.ellipse(eyeX + 2, eyeY, 6, 6 * this.eyeScale, 0, 0, Math.PI * 2);
+                ctx.moveTo(-bodyLength * 0.28, -drawSize * 0.20);
+                ctx.bezierCurveTo(-bodyLength * 0.27, -drawSize * 0.33, -bodyLength * 0.255, -drawSize * 0.44, -bodyLength * 0.24, -drawSize * 0.48);
+                ctx.stroke();
+                ctx.restore();
+
+                // 体のベース色
+                ctx.fillStyle = this.isHappy ? this.colors.bodyHappy : this.colors.body;
+                ctx.beginPath();
+                if (this.isStuffed) {
+                    ctx.moveTo(bodyLength * 0.50, 0);
+                    ctx.bezierCurveTo(bodyLength * 0.45, -drawSize * 0.40, bodyLength * 0.28, -drawSize * 0.48, 0, -drawSize * 0.50);
+                    ctx.bezierCurveTo(-bodyLength * 0.22, -drawSize * 0.48, -bodyLength * 0.38, -drawSize * 0.28, -bodyLength * 0.42, 0);
+                    ctx.bezierCurveTo(-bodyLength * 0.38, drawSize * 0.28, -bodyLength * 0.22, drawSize * 0.48, 0, drawSize * 0.50);
+                    ctx.bezierCurveTo(bodyLength * 0.28, drawSize * 0.48, bodyLength * 0.45, drawSize * 0.40, bodyLength * 0.50, 0);
+                } else {
+                    // より細く引き締まった流線型
+                    ctx.moveTo(bodyLength * 0.50, 0);
+                    ctx.bezierCurveTo(bodyLength * 0.45, -drawSize * 0.28, bodyLength * 0.28, -drawSize * 0.35, 0, -drawSize * 0.36);
+                    ctx.bezierCurveTo(-bodyLength * 0.22, -drawSize * 0.35, -bodyLength * 0.38, -drawSize * 0.22, -bodyLength * 0.42, 0);
+                    ctx.bezierCurveTo(-bodyLength * 0.38, drawSize * 0.22, -bodyLength * 0.22, drawSize * 0.35, 0, drawSize * 0.36);
+                    ctx.bezierCurveTo(bodyLength * 0.28, drawSize * 0.35, bodyLength * 0.45, drawSize * 0.28, bodyLength * 0.50, 0);
+                }
+                ctx.closePath();
+                ctx.fill();
+
+                // 3D立体感レイヤー1: 背中の陰影
+                const topShadow = ctx.createLinearGradient(0, -drawSize * 0.48, 0, -drawSize * 0.15);
+                topShadow.addColorStop(0, 'rgba(0, 0, 0, 0.35)');
+                topShadow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                ctx.fillStyle = topShadow;
+                ctx.beginPath();
+                if (this.isStuffed) {
+                    ctx.ellipse(bodyLength * 0.08, -drawSize * 0.25, bodyLength * 0.30, drawSize * 0.30, 0, 0, Math.PI * 2);
+                } else {
+                    ctx.ellipse(bodyLength * 0.08, -drawSize * 0.20, bodyLength * 0.26, drawSize * 0.24, 0, 0, Math.PI * 2);
+                }
+                ctx.fill();
+
+                // 3D立体感レイヤー2: サイドハイライト
+                const sideHighlight = ctx.createRadialGradient(bodyLength * 0.15, -drawSize * 0.05, 0, bodyLength * 0.15, -drawSize * 0.05, drawSize * 0.35);
+                sideHighlight.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
+                sideHighlight.addColorStop(0.6, 'rgba(255, 255, 255, 0.15)');
+                sideHighlight.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                ctx.fillStyle = sideHighlight;
+                ctx.beginPath();
+                if (this.isStuffed) {
+                    ctx.ellipse(bodyLength * 0.15, -drawSize * 0.05, bodyLength * 0.28, drawSize * 0.35, 0, 0, Math.PI * 2);
+                } else {
+                    ctx.ellipse(bodyLength * 0.15, -drawSize * 0.05, bodyLength * 0.24, drawSize * 0.28, 0, 0, Math.PI * 2);
+                }
+                ctx.fill();
+
+                // 3D立体感レイヤー3: 腹部のハイライト（白い下側）
+                const bellyGrad = ctx.createLinearGradient(0, drawSize * 0.10, 0, drawSize * 0.50);
+                bellyGrad.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
+                bellyGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.7)');
+                bellyGrad.addColorStop(1, 'rgba(255, 255, 255, 0.85)');
+                ctx.fillStyle = bellyGrad;
+                ctx.beginPath();
+                if (this.isStuffed) {
+                    ctx.moveTo(bodyLength * 0.40, drawSize * 0.10);
+                    ctx.bezierCurveTo(bodyLength * 0.22, drawSize * 0.44, -bodyLength * 0.08, drawSize * 0.52, -bodyLength * 0.30, drawSize * 0.20);
+                    ctx.bezierCurveTo(-bodyLength * 0.12, drawSize * 0.34, bodyLength * 0.15, drawSize * 0.30, bodyLength * 0.40, drawSize * 0.10);
+                } else {
+                    ctx.moveTo(bodyLength * 0.42, drawSize * 0.08);
+                    ctx.bezierCurveTo(bodyLength * 0.25, drawSize * 0.34, -bodyLength * 0.05, drawSize * 0.40, -bodyLength * 0.28, drawSize * 0.16);
+                    ctx.bezierCurveTo(-bodyLength * 0.10, drawSize * 0.30, bodyLength * 0.20, drawSize * 0.24, bodyLength * 0.42, drawSize * 0.08);
+                }
+                ctx.closePath();
+                ctx.fill();
+
+                // かっこいい要素: 体の模様（虎柄風のストライプ）
+                ctx.save();
+                ctx.globalAlpha = 0.15;
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+                ctx.lineWidth = 3;
+                ctx.lineCap = 'round';
+
+                for (let i = 0; i < 6; i++) {
+                    const x = bodyLength * 0.35 - i * bodyLength * 0.12;
+                    const angle = -0.3 + Math.sin(this.tailAngle + i * 0.5) * 0.1;
+
+                    ctx.save();
+                    ctx.translate(x, -drawSize * 0.20);
+                    ctx.rotate(angle);
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(0, drawSize * 0.25);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+                ctx.restore();
+
+                // かっこいい要素: 金属的な光沢（メタリックハイライト）
+                ctx.save();
+                ctx.globalAlpha = 0.3;
+                const metallicHighlight = ctx.createLinearGradient(bodyLength * 0.20, -drawSize * 0.35, bodyLength * 0.25, -drawSize * 0.15);
+                metallicHighlight.addColorStop(0, 'rgba(255, 255, 255, 0)');
+                metallicHighlight.addColorStop(0.5, 'rgba(255, 255, 255, 0.8)');
+                metallicHighlight.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                ctx.fillStyle = metallicHighlight;
+                ctx.beginPath();
+                ctx.ellipse(bodyLength * 0.22, -drawSize * 0.25, bodyLength * 0.15, drawSize * 0.12, 0.2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                // 3D立体感レイヤー4: エッジのハイライト（上部・より鋭く）
+                ctx.save();
+                ctx.globalAlpha = 0.7;
+                const edgeGrad = ctx.createLinearGradient(bodyLength * 0.48, 0, 0, -drawSize * 0.48);
+                edgeGrad.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+                edgeGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.5)');
+                edgeGrad.addColorStop(1, 'rgba(200, 220, 255, 0.3)');
+                ctx.strokeStyle = edgeGrad;
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                if (this.isStuffed) {
+                    ctx.moveTo(bodyLength * 0.48, 0);
+                    ctx.bezierCurveTo(bodyLength * 0.42, -drawSize * 0.48, bodyLength * 0.25, -drawSize * 0.60, 0, -drawSize * 0.62);
+                } else {
+                    ctx.moveTo(bodyLength * 0.48, 0);
+                    ctx.bezierCurveTo(bodyLength * 0.42, -drawSize * 0.35, bodyLength * 0.25, -drawSize * 0.45, 0, -drawSize * 0.48);
+                }
+                ctx.stroke();
+                ctx.restore();
+
+                // かっこいい要素: スピード感のある流線（動いている時）
+                if (this.speed > 0.5) {
+                    ctx.save();
+                    ctx.globalAlpha = 0.15;
+                    ctx.strokeStyle = 'rgba(200, 220, 255, 0.5)';
+                    ctx.lineWidth = 2;
+                    ctx.lineCap = 'round';
+
+                    for (let i = 0; i < 3; i++) {
+                        ctx.beginPath();
+                        ctx.moveTo(-bodyLength * 0.35 - i * 15, -drawSize * 0.10 + i * 8);
+                        ctx.lineTo(-bodyLength * 0.45 - i * 20, -drawSize * 0.10 + i * 8);
+                        ctx.stroke();
+                    }
+                    ctx.restore();
+                }
+
+                // 第一背びれ（より鋭くかっこよく）
+                const dorsalGrad = ctx.createLinearGradient(-bodyLength * 0.08, -drawSize * 0.48, bodyLength * 0.04, -drawSize * 1.40);
+                dorsalGrad.addColorStop(0, this.colors.tail);
+                dorsalGrad.addColorStop(0.25, this.colors.body);
+                dorsalGrad.addColorStop(0.6, 'rgba(50, 50, 80, 0.4)');
+                dorsalGrad.addColorStop(1, 'rgba(0, 0, 0, 0.5)');
+                ctx.fillStyle = dorsalGrad;
+                ctx.beginPath();
+                ctx.moveTo(-bodyLength * 0.08, -drawSize * 0.48);
+                ctx.bezierCurveTo(-bodyLength * 0.05, -drawSize * 0.85, 0, -drawSize * 1.22, bodyLength * 0.03, -drawSize * 1.40);
+                ctx.bezierCurveTo(bodyLength * 0.06, -drawSize * 1.35, bodyLength * 0.11, -drawSize * 1.08, bodyLength * 0.15, -drawSize * 0.75);
+                ctx.bezierCurveTo(bodyLength * 0.17, -drawSize * 0.48, bodyLength * 0.10, -drawSize * 0.45, -bodyLength * 0.08, -drawSize * 0.48);
+                ctx.fill();
+
+                // 背びれの鋭いエッジハイライト（かっこいい光沢）
+                ctx.save();
+                ctx.globalAlpha = 0.8;
+                const dorsalEdge = ctx.createLinearGradient(-bodyLength * 0.08, -drawSize * 0.48, bodyLength * 0.03, -drawSize * 1.40);
+                dorsalEdge.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
+                dorsalEdge.addColorStop(0.3, 'rgba(200, 220, 255, 0.9)');
+                dorsalEdge.addColorStop(0.7, 'rgba(150, 180, 255, 0.6)');
+                dorsalEdge.addColorStop(1, 'rgba(100, 140, 255, 0.3)');
+                ctx.strokeStyle = dorsalEdge;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(-bodyLength * 0.08, -drawSize * 0.48);
+                ctx.bezierCurveTo(-bodyLength * 0.05, -drawSize * 0.85, 0, -drawSize * 1.22, bodyLength * 0.03, -drawSize * 1.40);
+                ctx.stroke();
+                ctx.restore();
+
+                // 背びれの影（体に落ちる影）
+                ctx.save();
+                ctx.globalAlpha = 0.2;
+                const dorsalShadow = ctx.createLinearGradient(-bodyLength * 0.08, -drawSize * 0.48, bodyLength * 0.08, -drawSize * 0.42);
+                dorsalShadow.addColorStop(0, 'rgba(0, 0, 0, 0.6)');
+                dorsalShadow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                ctx.fillStyle = dorsalShadow;
+                ctx.beginPath();
+                ctx.moveTo(-bodyLength * 0.08, -drawSize * 0.48);
+                ctx.lineTo(-bodyLength * 0.15, -drawSize * 0.45);
+                ctx.lineTo(bodyLength * 0.10, -drawSize * 0.40);
+                ctx.lineTo(bodyLength * 0.15, -drawSize * 0.75);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+
+                // かっこいい要素: 背びれ先端の鋭い光
+                ctx.save();
+                ctx.globalAlpha = 0.6;
+                const tipGlow = ctx.createRadialGradient(bodyLength * 0.03, -drawSize * 1.40, 0, bodyLength * 0.03, -drawSize * 1.40, 15);
+                tipGlow.addColorStop(0, 'rgba(200, 220, 255, 0.8)');
+                tipGlow.addColorStop(0.5, 'rgba(150, 180, 255, 0.4)');
+                tipGlow.addColorStop(1, 'rgba(100, 140, 255, 0)');
+                ctx.fillStyle = tipGlow;
+                ctx.beginPath();
+                ctx.arc(bodyLength * 0.03, -drawSize * 1.40, 15, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                // 左胸びれ（奥側 - 半透明で奥行き表現）
+                ctx.save();
+                ctx.globalAlpha = 0.5;
+                ctx.translate(bodyLength * 0.15, -drawSize * 0.42);
+                ctx.rotate(-0.7);
+
+                const leftPectoralGrad = ctx.createLinearGradient(0, 0, 24, -50);
+                leftPectoralGrad.addColorStop(0, this.colors.tail);
+                leftPectoralGrad.addColorStop(0.5, this.colors.body);
+                leftPectoralGrad.addColorStop(1, 'rgba(0, 0, 0, 0.2)');
+                ctx.fillStyle = leftPectoralGrad;
+
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.bezierCurveTo(10, -16, 20, -36, 24, -50);
+                ctx.bezierCurveTo(22, -48, 16, -34, 8, -20);
+                ctx.bezierCurveTo(4, -11, 2, -5, 0, -2);
+                ctx.closePath();
+                ctx.fill();
+
+                // 左胸びれハイライト
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.bezierCurveTo(10, -16, 20, -36, 24, -50);
+                ctx.stroke();
+                ctx.restore();
+
+                // 右胸びれ（手前側 - はっきり）
+                ctx.save();
+                ctx.translate(bodyLength * 0.15, drawSize * 0.42);
+                ctx.rotate(0.7);
+
+                const rightPectoralGrad = ctx.createLinearGradient(0, 0, 24, 50);
+                rightPectoralGrad.addColorStop(0, this.colors.tail);
+                rightPectoralGrad.addColorStop(0.4, this.colors.body);
+                rightPectoralGrad.addColorStop(1, 'rgba(0, 0, 0, 0.25)');
+                ctx.fillStyle = rightPectoralGrad;
+
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.bezierCurveTo(10, 16, 20, 36, 24, 50);
+                ctx.bezierCurveTo(22, 48, 16, 34, 8, 20);
+                ctx.bezierCurveTo(4, 11, 2, 5, 0, 2);
+                ctx.closePath();
+                ctx.fill();
+
+                // 右胸びれハイライト（かっこいい光沢）
+                const pectoralEdge = ctx.createLinearGradient(0, 0, 24, 50);
+                pectoralEdge.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
+                pectoralEdge.addColorStop(0.5, 'rgba(200, 220, 255, 0.8)');
+                pectoralEdge.addColorStop(1, 'rgba(150, 180, 255, 0.5)');
+                ctx.strokeStyle = pectoralEdge;
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.bezierCurveTo(10, 16, 20, 36, 24, 50);
+                ctx.stroke();
+
+                // 右胸びれの影（体に落ちる）
+                ctx.globalAlpha = 0.2;
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                ctx.beginPath();
+                ctx.ellipse(-5, -5, 12, 8, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // かっこいい要素: 胸びれ先端の光
+                if (this.speed > 0.4) {
+                    ctx.globalAlpha = 0.4;
+                    const finTipGlow = ctx.createRadialGradient(24, 50, 0, 24, 50, 12);
+                    finTipGlow.addColorStop(0, 'rgba(150, 200, 255, 0.7)');
+                    finTipGlow.addColorStop(1, 'rgba(100, 160, 255, 0)');
+                    ctx.fillStyle = finTipGlow;
+                    ctx.beginPath();
+                    ctx.arc(24, 50, 12, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+
+                // 左腹びれ（奥側 - 半透明）
+                ctx.save();
+                ctx.globalAlpha = 0.5;
+                ctx.translate(-bodyLength * 0.10, -drawSize * 0.36);
+                ctx.rotate(-0.5);
+
+                const leftPelvicGrad = ctx.createLinearGradient(0, 0, 9, -18);
+                leftPelvicGrad.addColorStop(0, this.colors.tail);
+                leftPelvicGrad.addColorStop(0.6, this.colors.body);
+                leftPelvicGrad.addColorStop(1, 'rgba(255, 255, 255, 0.3)');
+                ctx.fillStyle = leftPelvicGrad;
+
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.bezierCurveTo(4, -8, 7, -14, 9, -18);
+                ctx.bezierCurveTo(7, -16, 4, -10, 0, -3);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+
+                // 右腹びれ（手前側）
+                ctx.save();
+                ctx.translate(-bodyLength * 0.10, drawSize * 0.36);
+                ctx.rotate(0.5);
+
+                const rightPelvicGrad = ctx.createLinearGradient(0, 0, 9, 18);
+                rightPelvicGrad.addColorStop(0, this.colors.tail);
+                rightPelvicGrad.addColorStop(0.6, this.colors.body);
+                rightPelvicGrad.addColorStop(1, 'rgba(255, 255, 255, 0.4)');
+                ctx.fillStyle = rightPelvicGrad;
+
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.bezierCurveTo(4, 8, 7, 14, 9, 18);
+                ctx.bezierCurveTo(7, 16, 4, 10, 0, 3);
+                ctx.closePath();
                 ctx.fill();
 
                 // ハイライト
-                ctx.fillStyle = 'white';
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.lineWidth = 1;
                 ctx.beginPath();
-                ctx.arc(eyeX + 4, eyeY - 2, 3 * this.eyeScale, 0, Math.PI * 2);
+                ctx.moveTo(0, 0);
+                ctx.bezierCurveTo(4, 8, 7, 14, 9, 18);
+                ctx.stroke();
+                ctx.restore();
+
+                // 臀びれ（3Dグラデーション）
+                const analGrad = ctx.createLinearGradient(-bodyLength * 0.24, drawSize * 0.48, -bodyLength * 0.19, drawSize * 0.70);
+                analGrad.addColorStop(0, this.colors.tail);
+                analGrad.addColorStop(0.5, this.colors.body);
+                analGrad.addColorStop(1, 'rgba(255, 255, 255, 0.4)');
+                ctx.fillStyle = analGrad;
+                ctx.beginPath();
+                ctx.moveTo(-bodyLength * 0.24, drawSize * 0.48);
+                ctx.bezierCurveTo(-bodyLength * 0.23, drawSize * 0.58, -bodyLength * 0.21, drawSize * 0.66, -bodyLength * 0.19, drawSize * 0.70);
+                ctx.bezierCurveTo(-bodyLength * 0.185, drawSize * 0.67, -bodyLength * 0.17, drawSize * 0.60, -bodyLength * 0.16, drawSize * 0.49);
+                ctx.closePath();
                 ctx.fill();
 
-                // 口（満腹時は眠っている）
-                if (this.isStuffed) {
-                    // 満腹時：眠っている口
-                    ctx.fillStyle = '#333';
+                // エラのスリット（3D的な陰影）
+                for (let i = 0; i < 5; i++) {
+                    // スリットの影（深さ表現）
+                    ctx.save();
+                    ctx.globalAlpha = 0.6;
+                    ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
+                    ctx.lineWidth = 2.5;
                     ctx.beginPath();
-                    ctx.ellipse(drawSize * 0.5, 8, 6, 3, 0, 0, Math.PI * 2);
-                    ctx.fill();
-                } else if (this.isHappy) {
-                    // 幸せ時：笑顔
-                    ctx.strokeStyle = '#333';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.arc(drawSize * 0.5, 5, 10, 0.2, Math.PI - 0.2);
+                    ctx.moveTo(bodyLength * 0.18 - i * 7, drawSize * 0.28);
+                    ctx.bezierCurveTo(
+                        bodyLength * 0.16 - i * 7, drawSize * 0.34,
+                        bodyLength * 0.14 - i * 7, drawSize * 0.38,
+                        bodyLength * 0.12 - i * 7, drawSize * 0.40
+                    );
                     ctx.stroke();
-                } else {
-                    // 通常時
-                    ctx.fillStyle = '#333';
+                    ctx.restore();
+
+                    // スリットの輪郭
+                    ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+                    ctx.lineWidth = 1;
                     ctx.beginPath();
-                    ctx.ellipse(drawSize * 0.5, 5, 8, 4, 0, 0, Math.PI * 2);
-                    ctx.fill();
+                    ctx.moveTo(bodyLength * 0.18 - i * 7, drawSize * 0.28);
+                    ctx.bezierCurveTo(
+                        bodyLength * 0.16 - i * 7, drawSize * 0.34,
+                        bodyLength * 0.14 - i * 7, drawSize * 0.38,
+                        bodyLength * 0.12 - i * 7, drawSize * 0.40
+                    );
+                    ctx.stroke();
                 }
 
-                // ほっぺ
-                ctx.fillStyle = 'rgba(255, 182, 193, 0.4)';
+                // 鼻先（3D円錐形グラデーション）
+                const snoutGrad = ctx.createLinearGradient(bodyLength * 0.42, -drawSize * 0.22, bodyLength * 0.42, drawSize * 0.22);
+                snoutGrad.addColorStop(0, 'rgba(0, 0, 0, 0.2)');
+                snoutGrad.addColorStop(0.35, this.colors.body);
+                snoutGrad.addColorStop(0.65, this.colors.body);
+                snoutGrad.addColorStop(1, 'rgba(255, 255, 255, 0.4)');
+                ctx.fillStyle = snoutGrad;
                 ctx.beginPath();
-                ctx.arc(drawSize * 0.15, 10, 8, 0, Math.PI * 2);
+                ctx.moveTo(bodyLength * 0.48, 0);
+                ctx.bezierCurveTo(bodyLength * 0.46, -drawSize * 0.12, bodyLength * 0.44, -drawSize * 0.18, bodyLength * 0.42, -drawSize * 0.22);
+                ctx.lineTo(bodyLength * 0.42, drawSize * 0.22);
+                ctx.bezierCurveTo(bodyLength * 0.44, drawSize * 0.18, bodyLength * 0.46, drawSize * 0.12, bodyLength * 0.48, 0);
+                ctx.closePath();
                 ctx.fill();
 
-                // 満腹時：Zzz...マークを表示
+                // 鼻先のハイライト
+                ctx.save();
+                ctx.globalAlpha = 0.5;
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(bodyLength * 0.48, 0);
+                ctx.bezierCurveTo(bodyLength * 0.46, -drawSize * 0.12, bodyLength * 0.44, -drawSize * 0.18, bodyLength * 0.42, -drawSize * 0.22);
+                ctx.stroke();
+                ctx.restore();
+
+                // 目（3D球体表現）
+                const eyeX = bodyLength * 0.25;
+                const eyeY = -drawSize * 0.28;
+
+                // 目のくぼみ（影・より小さく鋭く）
+                ctx.save();
+                ctx.globalAlpha = 0.4;
+                const eyeSocketShadow = ctx.createRadialGradient(eyeX, eyeY + 0.5, 0, eyeX, eyeY + 0.5, 7);
+                eyeSocketShadow.addColorStop(0, 'rgba(0, 0, 0, 0.4)');
+                eyeSocketShadow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                ctx.fillStyle = eyeSocketShadow;
+                ctx.beginPath();
+                ctx.ellipse(eyeX, eyeY + 0.5, 5, 7, -0.2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                // 白目（球体グラデーション・より小さく鋭く）
+                const scleraGrad = ctx.createRadialGradient(eyeX - 1, eyeY - 1, 0, eyeX, eyeY, 5);
+                scleraGrad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+                scleraGrad.addColorStop(0.7, 'rgba(240, 240, 240, 1)');
+                scleraGrad.addColorStop(1, 'rgba(200, 200, 200, 1)');
+                ctx.fillStyle = scleraGrad;
+                ctx.beginPath();
+                ctx.ellipse(eyeX, eyeY, 4, 6 * this.eyeScale, -0.2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 虹彩（球体グラデーション・より小さく鋭く）
+                const irisColor = this.personality === 'clumsy' ? '#8B4513' :
+                                 this.personality === 'greedy' ? '#DAA520' : '#4169E1';
+                const irisGrad = ctx.createRadialGradient(eyeX + 0.3, eyeY - 0.5, 0, eyeX + 0.5, eyeY, 4);
+                irisGrad.addColorStop(0, irisColor);
+                irisGrad.addColorStop(0.6, irisColor);
+                irisGrad.addColorStop(1, 'rgba(0, 0, 0, 0.5)');
+                ctx.fillStyle = irisGrad;
+                ctx.beginPath();
+                ctx.ellipse(eyeX + 0.5, eyeY, 3, 4 * this.eyeScale, -0.2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 瞳孔（深い黒・より小さく鋭く）
+                ctx.fillStyle = 'black';
+                ctx.beginPath();
+                ctx.ellipse(eyeX + 0.5, eyeY, 1.5, 2.5 * this.eyeScale, -0.2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // メインハイライト（小さく鋭く）
+                const highlightGrad = ctx.createRadialGradient(eyeX + 1.5, eyeY - 2, 0, eyeX + 1.5, eyeY - 2, 2);
+                highlightGrad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+                highlightGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.8)');
+                highlightGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                ctx.fillStyle = highlightGrad;
+                ctx.beginPath();
+                ctx.arc(eyeX + 1.5, eyeY - 2, 2 * this.eyeScale, 0, Math.PI * 2);
+                ctx.fill();
+
+                // サブハイライト（小さく）
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.beginPath();
+                ctx.arc(eyeX - 1, eyeY + 2, 1 * this.eyeScale, 0, Math.PI * 2);
+                ctx.fill();
+
+                // かっこいい要素: 鋭い眼光（動いている時・幸せでない時）
+                if (!this.isHappy && !this.isStuffed && this.speed > 0.3) {
+                    ctx.save();
+                    ctx.globalAlpha = 0.7;
+                    const glareGrad = ctx.createRadialGradient(eyeX + 1, eyeY, 0, eyeX + 1, eyeY, 10);
+                    glareGrad.addColorStop(0, 'rgba(255, 200, 100, 0.9)');
+                    glareGrad.addColorStop(0.4, 'rgba(255, 150, 50, 0.5)');
+                    glareGrad.addColorStop(1, 'rgba(255, 100, 0, 0)');
+                    ctx.fillStyle = glareGrad;
+                    ctx.beginPath();
+                    ctx.arc(eyeX + 1, eyeY, 10, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // 鋭い光の筋（より鋭く）
+                    ctx.strokeStyle = 'rgba(255, 220, 150, 0.8)';
+                    ctx.lineWidth = 2.5;
+                    ctx.lineCap = 'round';
+                    ctx.beginPath();
+                    ctx.moveTo(eyeX - 4, eyeY);
+                    ctx.lineTo(eyeX + 12, eyeY);
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.moveTo(eyeX + 1, eyeY - 7);
+                    ctx.lineTo(eyeX + 1, eyeY + 7);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+
+                // 鼻孔（3D的な穴）
+                // 右鼻孔
+                ctx.save();
+                ctx.globalAlpha = 0.7;
+                const nostrilGrad1 = ctx.createRadialGradient(bodyLength * 0.38, drawSize * 0.15, 0, bodyLength * 0.38, drawSize * 0.15, 3);
+                nostrilGrad1.addColorStop(0, 'rgba(0, 0, 0, 0.8)');
+                nostrilGrad1.addColorStop(0.7, 'rgba(0, 0, 0, 0.4)');
+                nostrilGrad1.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                ctx.fillStyle = nostrilGrad1;
+                ctx.beginPath();
+                ctx.ellipse(bodyLength * 0.38, drawSize * 0.15, 2.5, 3.5, 0.3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                // 左鼻孔
+                ctx.save();
+                ctx.globalAlpha = 0.7;
+                const nostrilGrad2 = ctx.createRadialGradient(bodyLength * 0.38, -drawSize * 0.15, 0, bodyLength * 0.38, -drawSize * 0.15, 3);
+                nostrilGrad2.addColorStop(0, 'rgba(0, 0, 0, 0.8)');
+                nostrilGrad2.addColorStop(0.7, 'rgba(0, 0, 0, 0.4)');
+                nostrilGrad2.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                ctx.fillStyle = nostrilGrad2;
+                ctx.beginPath();
+                ctx.ellipse(bodyLength * 0.38, -drawSize * 0.15, 2.5, 3.5, -0.3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                // 口（3D的な奥行き）
                 if (this.isStuffed) {
-                    ctx.fillStyle = 'rgba(100, 100, 100, 0.7)';
-                    ctx.font = 'bold 20px Arial';
-                    ctx.fillText('Zzz', drawSize * 0.8, -drawSize * 0.6);
+                    // 満腹時：眠そうな口
+                    ctx.save();
+                    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+                    ctx.shadowBlur = 3;
+                    ctx.shadowOffsetY = 1;
+                    ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.moveTo(bodyLength * 0.32, drawSize * 0.32);
+                    ctx.quadraticCurveTo(bodyLength * 0.24, drawSize * 0.36, bodyLength * 0.16, drawSize * 0.38);
+                    ctx.stroke();
+                    ctx.restore();
+                } else if (this.isHappy) {
+                    // 幸せ時：笑顔（口内の影）
+                    const mouthGrad = ctx.createRadialGradient(bodyLength * 0.26, drawSize * 0.30, 0, bodyLength * 0.26, drawSize * 0.30, drawSize * 0.28);
+                    mouthGrad.addColorStop(0, 'rgba(50, 30, 30, 0.6)');
+                    mouthGrad.addColorStop(0.7, 'rgba(50, 30, 30, 0.3)');
+                    mouthGrad.addColorStop(1, 'rgba(50, 30, 30, 0)');
+                    ctx.fillStyle = mouthGrad;
+                    ctx.beginPath();
+                    ctx.arc(bodyLength * 0.26, drawSize * 0.22, drawSize * 0.28, 0.2, Math.PI - 0.2);
+                    ctx.lineTo(bodyLength * 0.12, drawSize * 0.42);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // 歯（より鋭く攻撃的に）
+                    for (let i = 0; i < 7; i++) {
+                        const x = bodyLength * 0.38 - i * 6.5;
+                        const y = drawSize * 0.34;
+                        const size = i % 2 === 0 ? 6 : 5; // 交互に大きさを変える
+
+                        // 歯のベース（鋭い三角形）
+                        ctx.fillStyle = 'white';
+                        ctx.beginPath();
+                        ctx.moveTo(x, y);
+                        ctx.lineTo(x - 2.5, y + size);
+                        ctx.lineTo(x + 2.5, y + size);
+                        ctx.closePath();
+                        ctx.fill();
+
+                        // 歯のハイライト（金属的な光沢）
+                        const toothGrad = ctx.createLinearGradient(x - 2, y, x + 2, y + size);
+                        toothGrad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+                        toothGrad.addColorStop(0.5, 'rgba(240, 240, 255, 0.9)');
+                        toothGrad.addColorStop(1, 'rgba(220, 220, 240, 0.7)');
+                        ctx.fillStyle = toothGrad;
+                        ctx.beginPath();
+                        ctx.moveTo(x - 0.5, y + 0.5);
+                        ctx.lineTo(x - 2, y + size - 0.5);
+                        ctx.lineTo(x + 0.5, y + size - 0.5);
+                        ctx.closePath();
+                        ctx.fill();
+
+                        // 歯の鋭いエッジ（かっこいい輝き）
+                        ctx.save();
+                        ctx.globalAlpha = 0.7;
+                        ctx.strokeStyle = 'rgba(200, 220, 255, 0.9)';
+                        ctx.lineWidth = 1.5;
+                        ctx.beginPath();
+                        ctx.moveTo(x, y);
+                        ctx.lineTo(x - 2.5, y + size);
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+                } else {
+                    // 通常時：優しい表情（影付き）
+                    ctx.save();
+                    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+                    ctx.shadowBlur = 2;
+                    ctx.shadowOffsetY = 1;
+                    ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.arc(bodyLength * 0.26, drawSize * 0.22, drawSize * 0.28, 0.3, Math.PI - 0.3);
+                    ctx.stroke();
+                    ctx.restore();
+
+                    // 歯のヒント（より鋭く）
+                    for (let i = 0; i < 6; i++) {
+                        const x = bodyLength * 0.38 - i * 6.5;
+                        const y = drawSize * 0.38;
+
+                        // 歯のベース（鋭い）
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                        ctx.beginPath();
+                        ctx.moveTo(x, y);
+                        ctx.lineTo(x - 2, y + 4);
+                        ctx.lineTo(x + 2, y + 4);
+                        ctx.closePath();
+                        ctx.fill();
+
+                        // 歯のハイライト（光沢）
+                        const smallToothGrad = ctx.createLinearGradient(x - 1, y, x + 1, y + 4);
+                        smallToothGrad.addColorStop(0, 'rgba(255, 255, 255, 0.5)');
+                        smallToothGrad.addColorStop(1, 'rgba(220, 220, 240, 0.2)');
+                        ctx.fillStyle = smallToothGrad;
+                        ctx.beginPath();
+                        ctx.moveTo(x - 0.5, y + 0.5);
+                        ctx.lineTo(x - 1.5, y + 3.5);
+                        ctx.lineTo(x + 0.5, y + 3.5);
+                        ctx.closePath();
+                        ctx.fill();
+
+                        // 鋭いエッジ
+                        ctx.save();
+                        ctx.globalAlpha = 0.4;
+                        ctx.strokeStyle = 'rgba(200, 220, 255, 0.6)';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(x, y);
+                        ctx.lineTo(x - 2, y + 4);
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+                }
+
+                // ほっぺは削除（かっこいい路線のため）
+
+                // ジタバタ中：💦マークを表示
+                if (this.isStruggling) {
+                    ctx.save();
+                    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+                    ctx.shadowBlur = 4;
+                    ctx.fillStyle = 'rgba(50, 150, 255, 0.9)';
+                    ctx.font = 'bold 28px Arial';
+                    const wobble = Math.sin(this.strugglingTimer * 0.5) * 5;
+                    ctx.fillText('💦', bodyLength * 0.02 + wobble, -drawSize * 1.15);
+                    ctx.fillStyle = 'rgba(255, 50, 50, 0.9)';
+                    ctx.fillText('!!', -bodyLength * 0.15 - wobble, -drawSize * 1.20);
+                    ctx.restore();
+                }
+                // 満腹時：Zzz...マークを表示（影付き）
+                else if (this.isStuffed) {
+                    ctx.save();
+                    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+                    ctx.shadowBlur = 4;
+                    ctx.fillStyle = 'rgba(100, 100, 100, 0.8)';
+                    ctx.font = 'bold 24px Arial';
+                    ctx.fillText('Zzz', bodyLength * 0.02, -drawSize * 1.15);
+                    ctx.restore();
+                }
+
+                // かっこいい要素: オーラエフェクト（速く動いている時）
+                if (!this.isStuffed && this.speed > 1.5) {
+                    ctx.save();
+                    ctx.globalAlpha = 0.15;
+                    const auraGrad = ctx.createRadialGradient(0, 0, bodyLength * 0.3, 0, 0, bodyLength * 0.8);
+                    auraGrad.addColorStop(0, 'rgba(100, 180, 255, 0.4)');
+                    auraGrad.addColorStop(0.5, 'rgba(150, 200, 255, 0.2)');
+                    auraGrad.addColorStop(1, 'rgba(200, 220, 255, 0)');
+                    ctx.fillStyle = auraGrad;
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, bodyLength * 0.8, drawSize * 0.8, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
                 }
 
                 ctx.restore();
@@ -559,7 +1290,7 @@
 
             isClicked(mx, my) {
                 const dist = Math.hypot(mx - this.x, my - this.y);
-                return dist < this.size;
+                return dist < this.size * 2.0; // デフォルメに合わせた当たり判定
             }
         }
 
@@ -782,8 +1513,8 @@
             sharks.push(new Shark('greedy', canvas.width * 0.5, canvas.height * 0.5));
             sharks.push(new Shark('shy', canvas.width * 0.7, canvas.height * 0.7));
 
-            // 泡を生成
-            for (let i = 0; i < 20; i++) {
+            // 泡を生成（画面が広くなったので増やす）
+            for (let i = 0; i < 50; i++) {
                 bubbles.push(new Bubble());
             }
         }
