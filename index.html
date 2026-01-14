@@ -506,19 +506,19 @@
                 // 角度を正規化（0〜2π）
                 const normalizedAngle = ((this.angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
 
-                // 正面・後ろ向きの判定と立体感のためのスケール調整（穏やかに）
+                // 正面・後ろ向きの判定と立体感のためのスケール調整
                 let scaleX = 1.0;
                 let scaleY = 1.0;
 
                 // 正面向き（-45度〜45度、315度〜360度）
                 if (normalizedAngle < Math.PI / 4 || normalizedAngle > Math.PI * 7 / 4) {
-                    scaleX = 0.6; // 体を短く見せる（穏やかに）
-                    scaleY = 1.35; // 幅を広く見せる（穏やかに）
+                    scaleX = 0.5; // 体を短く
+                    scaleY = 1.5; // 幅を広く（サメらしい丸みに）
                 }
                 // 後ろ向き（135度〜225度）
                 else if (normalizedAngle > Math.PI * 3 / 4 && normalizedAngle < Math.PI * 5 / 4) {
-                    scaleX = 0.65; // 体を短く見せる（穏やかに）
-                    scaleY = 1.3; // 幅を広く見せる（穏やかに）
+                    scaleX = 0.55; // 体を短く
+                    scaleY = 1.45; // 幅を広く（サメらしい丸みに）
                 }
 
                 ctx.scale(scaleX, scaleY);
@@ -526,7 +526,7 @@
                 // 満腹状態の時はサイズを大きくする
                 const sizeMultiplier = this.isStuffed ? 1.35 : 1.0;
                 const drawSize = this.size * sizeMultiplier;
-                const bodyLength = drawSize * 2.5; // デフォルメで分かりやすく
+                const bodyLength = drawSize * 3.0; // サメらしい流線型に
 
                 // 影（3D的な柔らかい影）
                 ctx.save();
@@ -556,7 +556,7 @@
                 const tailWave = Math.sin(this.tailAngle) * 10;
 
                 // 尾びれ上葉（グラデーションで立体感・幅広く）
-                const tailHeight = drawSize * 1.8; // さらに大きく
+                const tailHeight = drawSize * 1.4; // サメらしいサイズに
                 const tailTopGrad = ctx.createLinearGradient(-bodyLength * 0.40, tailWave, -bodyLength * 0.60, tailWave - tailHeight);
                 tailTopGrad.addColorStop(0, this.colors.tail);
                 tailTopGrad.addColorStop(0.5, this.colors.body);
@@ -602,7 +602,7 @@
                 }
 
                 // 尾びれ下葉（幅広く）
-                const tailBottomHeight = drawSize * 0.66; // さらに大きく
+                const tailBottomHeight = drawSize * 0.50; // サメらしいサイズに
                 const tailBottomGrad = ctx.createLinearGradient(-bodyLength * 0.40, tailWave, -bodyLength * 0.53, tailWave + tailBottomHeight);
                 tailBottomGrad.addColorStop(0, this.colors.tail);
                 tailBottomGrad.addColorStop(0.6, this.colors.body);
@@ -617,7 +617,7 @@
                 ctx.fill();
 
                 // 第二背びれ（3Dグラデーション・かっこよく・大きく）
-                const secondDorsalHeight = drawSize * 0.56; // さらに高く
+                const secondDorsalHeight = drawSize * 0.42; // サメらしいサイズに
                 const secondDorsalGrad = ctx.createLinearGradient(-bodyLength * 0.28, -drawSize * 0.20, -bodyLength * 0.24, -drawSize * 0.20 - secondDorsalHeight);
                 secondDorsalGrad.addColorStop(0, this.colors.tail);
                 secondDorsalGrad.addColorStop(0.4, this.colors.body);
@@ -780,7 +780,7 @@
                 }
 
                 // 第一背びれ（より鋭くかっこよく・幅も広く）
-                const dorsalHeight = drawSize * 1.60; // さらに高く
+                const dorsalHeight = drawSize * 1.10; // サメらしいサイズに
                 const dorsalWidth = bodyLength * 0.18; // 幅も広く
                 const dorsalGrad = ctx.createLinearGradient(-bodyLength * 0.08, -drawSize * 0.48, bodyLength * 0.04, -drawSize * 0.48 - dorsalHeight);
                 dorsalGrad.addColorStop(0, this.colors.tail);
@@ -847,8 +847,8 @@
                 ctx.translate(bodyLength * 0.15, -drawSize * 0.42);
                 ctx.rotate(-0.7);
 
-                const pectoralWidth = drawSize * 0.8; // さらに幅広く
-                const pectoralLength = drawSize * 1.4; // さらに長く
+                const pectoralWidth = drawSize * 0.60; // サメらしいサイズに
+                const pectoralLength = drawSize * 1.1; // サメらしいサイズに
                 const leftPectoralGrad = ctx.createLinearGradient(0, 0, pectoralWidth, -pectoralLength);
                 leftPectoralGrad.addColorStop(0, this.colors.tail);
                 leftPectoralGrad.addColorStop(0.5, this.colors.body);
@@ -930,8 +930,8 @@
                 ctx.translate(-bodyLength * 0.10, -drawSize * 0.36);
                 ctx.rotate(-0.5);
 
-                const pelvicWidth = drawSize * 0.30; // さらに幅広く
-                const pelvicLength = drawSize * 0.54; // さらに長く
+                const pelvicWidth = drawSize * 0.24; // サメらしいサイズに
+                const pelvicLength = drawSize * 0.42; // サメらしいサイズに
                 const leftPelvicGrad = ctx.createLinearGradient(0, 0, pelvicWidth, -pelvicLength);
                 leftPelvicGrad.addColorStop(0, this.colors.tail);
                 leftPelvicGrad.addColorStop(0.6, this.colors.body);
@@ -974,7 +974,7 @@
                 ctx.restore();
 
                 // 臀びれ（3Dグラデーション・大きく）
-                const analHeight = drawSize * 0.44; // さらに高く
+                const analHeight = drawSize * 0.34; // サメらしいサイズに
                 const analGrad = ctx.createLinearGradient(-bodyLength * 0.24, drawSize * 0.48, -bodyLength * 0.19, drawSize * 0.48 + analHeight);
                 analGrad.addColorStop(0, this.colors.tail);
                 analGrad.addColorStop(0.5, this.colors.body);
