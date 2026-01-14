@@ -503,6 +503,26 @@
                 ctx.translate(this.x + offsetX, this.y + offsetY);
                 ctx.rotate(this.angle);
 
+                // 角度を正規化（0〜2π）
+                const normalizedAngle = ((this.angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+
+                // 正面・後ろ向きの判定と立体感のためのスケール調整
+                let scaleX = 1.0;
+                let scaleY = 1.0;
+
+                // 正面向き（-45度〜45度、315度〜360度）
+                if (normalizedAngle < Math.PI / 4 || normalizedAngle > Math.PI * 7 / 4) {
+                    scaleX = 0.4; // 体を短く見せる
+                    scaleY = 1.4; // 幅を広く見せる
+                }
+                // 後ろ向き（135度〜225度）
+                else if (normalizedAngle > Math.PI * 3 / 4 && normalizedAngle < Math.PI * 5 / 4) {
+                    scaleX = 0.5; // 体を短く見せる
+                    scaleY = 1.3; // 幅を広く見せる
+                }
+
+                ctx.scale(scaleX, scaleY);
+
                 // 満腹状態の時はサイズを大きくする
                 const sizeMultiplier = this.isStuffed ? 1.35 : 1.0;
                 const drawSize = this.size * sizeMultiplier;
