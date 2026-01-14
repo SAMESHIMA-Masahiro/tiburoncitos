@@ -512,13 +512,13 @@
 
                 // 正面向き（-45度〜45度、315度〜360度）
                 if (normalizedAngle < Math.PI / 4 || normalizedAngle > Math.PI * 7 / 4) {
-                    scaleX = 0.4; // 体を短く見せる
-                    scaleY = 1.4; // 幅を広く見せる
+                    scaleX = 0.25; // 体をかなり短く見せる
+                    scaleY = 2.0; // 幅をかなり広く見せる
                 }
                 // 後ろ向き（135度〜225度）
                 else if (normalizedAngle > Math.PI * 3 / 4 && normalizedAngle < Math.PI * 5 / 4) {
-                    scaleX = 0.5; // 体を短く見せる
-                    scaleY = 1.3; // 幅を広く見せる
+                    scaleX = 0.30; // 体をかなり短く見せる
+                    scaleY = 1.8; // 幅をかなり広く見せる
                 }
 
                 ctx.scale(scaleX, scaleY);
@@ -556,7 +556,7 @@
                 const tailWave = Math.sin(this.tailAngle) * 10;
 
                 // 尾びれ上葉（グラデーションで立体感・幅広く）
-                const tailHeight = drawSize * 1.2;
+                const tailHeight = drawSize * 1.8; // さらに大きく
                 const tailTopGrad = ctx.createLinearGradient(-bodyLength * 0.40, tailWave, -bodyLength * 0.60, tailWave - tailHeight);
                 tailTopGrad.addColorStop(0, this.colors.tail);
                 tailTopGrad.addColorStop(0.5, this.colors.body);
@@ -602,7 +602,7 @@
                 }
 
                 // 尾びれ下葉（幅広く）
-                const tailBottomHeight = drawSize * 0.44;
+                const tailBottomHeight = drawSize * 0.66; // さらに大きく
                 const tailBottomGrad = ctx.createLinearGradient(-bodyLength * 0.40, tailWave, -bodyLength * 0.53, tailWave + tailBottomHeight);
                 tailBottomGrad.addColorStop(0, this.colors.tail);
                 tailBottomGrad.addColorStop(0.6, this.colors.body);
@@ -616,16 +616,17 @@
                 ctx.closePath();
                 ctx.fill();
 
-                // 第二背びれ（3Dグラデーション・かっこよく）
-                const secondDorsalGrad = ctx.createLinearGradient(-bodyLength * 0.28, -drawSize * 0.20, -bodyLength * 0.24, -drawSize * 0.48);
+                // 第二背びれ（3Dグラデーション・かっこよく・大きく）
+                const secondDorsalHeight = drawSize * 0.56; // さらに高く
+                const secondDorsalGrad = ctx.createLinearGradient(-bodyLength * 0.28, -drawSize * 0.20, -bodyLength * 0.24, -drawSize * 0.20 - secondDorsalHeight);
                 secondDorsalGrad.addColorStop(0, this.colors.tail);
                 secondDorsalGrad.addColorStop(0.4, this.colors.body);
                 secondDorsalGrad.addColorStop(1, 'rgba(50, 50, 80, 0.35)');
                 ctx.fillStyle = secondDorsalGrad;
                 ctx.beginPath();
                 ctx.moveTo(-bodyLength * 0.28, -drawSize * 0.20);
-                ctx.bezierCurveTo(-bodyLength * 0.27, -drawSize * 0.33, -bodyLength * 0.255, -drawSize * 0.44, -bodyLength * 0.24, -drawSize * 0.48);
-                ctx.bezierCurveTo(-bodyLength * 0.23, -drawSize * 0.45, -bodyLength * 0.22, -drawSize * 0.35, -bodyLength * 0.21, -drawSize * 0.22);
+                ctx.bezierCurveTo(-bodyLength * 0.27, -drawSize * 0.20 - secondDorsalHeight * 0.46, -bodyLength * 0.255, -drawSize * 0.20 - secondDorsalHeight * 0.86, -bodyLength * 0.24, -drawSize * 0.20 - secondDorsalHeight);
+                ctx.bezierCurveTo(-bodyLength * 0.23, -drawSize * 0.20 - secondDorsalHeight * 0.89, -bodyLength * 0.22, -drawSize * 0.20 - secondDorsalHeight * 0.54, -bodyLength * 0.21, -drawSize * 0.20 - secondDorsalHeight * 0.07);
                 ctx.closePath();
                 ctx.fill();
 
@@ -636,7 +637,7 @@
                 ctx.lineWidth = 1.5;
                 ctx.beginPath();
                 ctx.moveTo(-bodyLength * 0.28, -drawSize * 0.20);
-                ctx.bezierCurveTo(-bodyLength * 0.27, -drawSize * 0.33, -bodyLength * 0.255, -drawSize * 0.44, -bodyLength * 0.24, -drawSize * 0.48);
+                ctx.bezierCurveTo(-bodyLength * 0.27, -drawSize * 0.20 - secondDorsalHeight * 0.46, -bodyLength * 0.255, -drawSize * 0.20 - secondDorsalHeight * 0.86, -bodyLength * 0.24, -drawSize * 0.20 - secondDorsalHeight);
                 ctx.stroke();
                 ctx.restore();
 
@@ -778,8 +779,10 @@
                     ctx.restore();
                 }
 
-                // 第一背びれ（より鋭くかっこよく）
-                const dorsalGrad = ctx.createLinearGradient(-bodyLength * 0.08, -drawSize * 0.48, bodyLength * 0.04, -drawSize * 1.40);
+                // 第一背びれ（より鋭くかっこよく・幅も広く）
+                const dorsalHeight = drawSize * 1.60; // さらに高く
+                const dorsalWidth = bodyLength * 0.18; // 幅も広く
+                const dorsalGrad = ctx.createLinearGradient(-bodyLength * 0.08, -drawSize * 0.48, bodyLength * 0.04, -drawSize * 0.48 - dorsalHeight);
                 dorsalGrad.addColorStop(0, this.colors.tail);
                 dorsalGrad.addColorStop(0.25, this.colors.body);
                 dorsalGrad.addColorStop(0.6, 'rgba(50, 50, 80, 0.4)');
@@ -787,15 +790,15 @@
                 ctx.fillStyle = dorsalGrad;
                 ctx.beginPath();
                 ctx.moveTo(-bodyLength * 0.08, -drawSize * 0.48);
-                ctx.bezierCurveTo(-bodyLength * 0.05, -drawSize * 0.85, 0, -drawSize * 1.22, bodyLength * 0.03, -drawSize * 1.40);
-                ctx.bezierCurveTo(bodyLength * 0.06, -drawSize * 1.35, bodyLength * 0.11, -drawSize * 1.08, bodyLength * 0.15, -drawSize * 0.75);
-                ctx.bezierCurveTo(bodyLength * 0.17, -drawSize * 0.48, bodyLength * 0.10, -drawSize * 0.45, -bodyLength * 0.08, -drawSize * 0.48);
+                ctx.bezierCurveTo(-bodyLength * 0.05, -drawSize * 0.48 - dorsalHeight * 0.53, 0, -drawSize * 0.48 - dorsalHeight * 0.88, bodyLength * 0.03, -drawSize * 0.48 - dorsalHeight);
+                ctx.bezierCurveTo(bodyLength * 0.06, -drawSize * 0.48 - dorsalHeight * 0.96, dorsalWidth * 0.61, -drawSize * 0.48 - dorsalHeight * 0.77, dorsalWidth * 0.83, -drawSize * 0.48 - dorsalHeight * 0.48);
+                ctx.bezierCurveTo(dorsalWidth * 0.94, -drawSize * 0.48, dorsalWidth * 0.56, -drawSize * 0.45, -bodyLength * 0.08, -drawSize * 0.48);
                 ctx.fill();
 
                 // 背びれの鋭いエッジハイライト（かっこいい光沢）
                 ctx.save();
                 ctx.globalAlpha = 0.8;
-                const dorsalEdge = ctx.createLinearGradient(-bodyLength * 0.08, -drawSize * 0.48, bodyLength * 0.03, -drawSize * 1.40);
+                const dorsalEdge = ctx.createLinearGradient(-bodyLength * 0.08, -drawSize * 0.48, bodyLength * 0.03, -drawSize * 0.48 - dorsalHeight);
                 dorsalEdge.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
                 dorsalEdge.addColorStop(0.3, 'rgba(200, 220, 255, 0.9)');
                 dorsalEdge.addColorStop(0.7, 'rgba(150, 180, 255, 0.6)');
@@ -804,7 +807,7 @@
                 ctx.lineWidth = 3;
                 ctx.beginPath();
                 ctx.moveTo(-bodyLength * 0.08, -drawSize * 0.48);
-                ctx.bezierCurveTo(-bodyLength * 0.05, -drawSize * 0.85, 0, -drawSize * 1.22, bodyLength * 0.03, -drawSize * 1.40);
+                ctx.bezierCurveTo(-bodyLength * 0.05, -drawSize * 0.48 - dorsalHeight * 0.53, 0, -drawSize * 0.48 - dorsalHeight * 0.88, bodyLength * 0.03, -drawSize * 0.48 - dorsalHeight);
                 ctx.stroke();
                 ctx.restore();
 
@@ -827,13 +830,14 @@
                 // かっこいい要素: 背びれ先端の鋭い光
                 ctx.save();
                 ctx.globalAlpha = 0.6;
-                const tipGlow = ctx.createRadialGradient(bodyLength * 0.03, -drawSize * 1.40, 0, bodyLength * 0.03, -drawSize * 1.40, 15);
+                const tipGlowSize = drawSize * 0.30;
+                const tipGlow = ctx.createRadialGradient(bodyLength * 0.03, -drawSize * 0.48 - dorsalHeight, 0, bodyLength * 0.03, -drawSize * 0.48 - dorsalHeight, tipGlowSize);
                 tipGlow.addColorStop(0, 'rgba(200, 220, 255, 0.8)');
                 tipGlow.addColorStop(0.5, 'rgba(150, 180, 255, 0.4)');
                 tipGlow.addColorStop(1, 'rgba(100, 140, 255, 0)');
                 ctx.fillStyle = tipGlow;
                 ctx.beginPath();
-                ctx.arc(bodyLength * 0.03, -drawSize * 1.40, 15, 0, Math.PI * 2);
+                ctx.arc(bodyLength * 0.03, -drawSize * 0.48 - dorsalHeight, tipGlowSize, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.restore();
 
@@ -843,8 +847,8 @@
                 ctx.translate(bodyLength * 0.15, -drawSize * 0.42);
                 ctx.rotate(-0.7);
 
-                const pectoralWidth = drawSize * 0.48;
-                const pectoralLength = drawSize * 1.0;
+                const pectoralWidth = drawSize * 0.8; // さらに幅広く
+                const pectoralLength = drawSize * 1.4; // さらに長く
                 const leftPectoralGrad = ctx.createLinearGradient(0, 0, pectoralWidth, -pectoralLength);
                 leftPectoralGrad.addColorStop(0, this.colors.tail);
                 leftPectoralGrad.addColorStop(0.5, this.colors.body);
@@ -926,8 +930,8 @@
                 ctx.translate(-bodyLength * 0.10, -drawSize * 0.36);
                 ctx.rotate(-0.5);
 
-                const pelvicWidth = drawSize * 0.18;
-                const pelvicLength = drawSize * 0.36;
+                const pelvicWidth = drawSize * 0.30; // さらに幅広く
+                const pelvicLength = drawSize * 0.54; // さらに長く
                 const leftPelvicGrad = ctx.createLinearGradient(0, 0, pelvicWidth, -pelvicLength);
                 leftPelvicGrad.addColorStop(0, this.colors.tail);
                 leftPelvicGrad.addColorStop(0.6, this.colors.body);
@@ -969,16 +973,17 @@
                 ctx.stroke();
                 ctx.restore();
 
-                // 臀びれ（3Dグラデーション）
-                const analGrad = ctx.createLinearGradient(-bodyLength * 0.24, drawSize * 0.48, -bodyLength * 0.19, drawSize * 0.70);
+                // 臀びれ（3Dグラデーション・大きく）
+                const analHeight = drawSize * 0.44; // さらに高く
+                const analGrad = ctx.createLinearGradient(-bodyLength * 0.24, drawSize * 0.48, -bodyLength * 0.19, drawSize * 0.48 + analHeight);
                 analGrad.addColorStop(0, this.colors.tail);
                 analGrad.addColorStop(0.5, this.colors.body);
                 analGrad.addColorStop(1, 'rgba(255, 255, 255, 0.4)');
                 ctx.fillStyle = analGrad;
                 ctx.beginPath();
                 ctx.moveTo(-bodyLength * 0.24, drawSize * 0.48);
-                ctx.bezierCurveTo(-bodyLength * 0.23, drawSize * 0.58, -bodyLength * 0.21, drawSize * 0.66, -bodyLength * 0.19, drawSize * 0.70);
-                ctx.bezierCurveTo(-bodyLength * 0.185, drawSize * 0.67, -bodyLength * 0.17, drawSize * 0.60, -bodyLength * 0.16, drawSize * 0.49);
+                ctx.bezierCurveTo(-bodyLength * 0.23, drawSize * 0.48 + analHeight * 0.45, -bodyLength * 0.21, drawSize * 0.48 + analHeight * 0.82, -bodyLength * 0.19, drawSize * 0.48 + analHeight);
+                ctx.bezierCurveTo(-bodyLength * 0.185, drawSize * 0.48 + analHeight * 0.86, -bodyLength * 0.17, drawSize * 0.48 + analHeight * 0.55, -bodyLength * 0.16, drawSize * 0.48 + analHeight * 0.05);
                 ctx.closePath();
                 ctx.fill();
 
