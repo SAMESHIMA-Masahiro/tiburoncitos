@@ -198,6 +198,12 @@
                 this.fleeTimer = 0; // 臆病用
                 this.eatenCount = 0; // 食べた餌の数
 
+                // 巡行モード（まっすぐゆらゆら泳ぐ）
+                this.isCruising = true;
+                this.cruisingTimer = Math.random() * 180 + 240; // 4-7秒
+                this.cruisingAngle = this.angle;
+                this.wobbleOffset = 0; // ゆらゆらのオフセット
+
                 // 満腹システム
                 this.recentEats = []; // 最近食べた餌のタイムスタンプ
                 this.isStuffed = false; // 満腹状態フラグ
@@ -323,9 +329,11 @@
                     this.targetX = this.x + Math.cos(fleeAngle) * 200;
                     this.targetY = this.y + Math.sin(fleeAngle) * 200;
                     this.speed = this.baseSpeed * 1.8;
+                    this.isCruising = false; // 巡行中断
                 } else if (this.fleeTimer > 0) {
                     this.fleeTimer--;
                     this.speed = this.baseSpeed * 1.5;
+                    this.isCruising = false; // 巡行中断
                 } else {
                     // 餌を探す（性格に応じた優先度付き）
                     let nearestFood = null;
@@ -373,19 +381,24 @@
                     // よくばり：常に餌を追いかける（範囲が広い）
                     const detectionRange = this.personality === 'greedy' ? 500 : 250;
 
-                    // おっちょこちょい：ランダムに方向転換してしまう
-                    if (this.personality === 'clumsy' && Math.random() < 0.03) {
+                    // おっちょこちょい：たまにランダムに方向転換してしまう（頻度を下げた）
+                    if (this.personality === 'clumsy' && Math.random() < 0.005) {
                         this.confusionTimer = 30;
                         this.targetX = Math.random() * canvas.width;
                         this.targetY = Math.random() * canvas.height;
+                        this.isCruising = false; // 巡行中断
                     }
 
-                    // 餌に向かうか、ランダムに泳ぐ
+                    // 餌に向かうか、巡行モードで泳ぐ
                     if (this.confusionTimer > 0) {
                         // おっちょこちょいが混乱中
                         this.confusionTimer--;
                         this.speed = this.baseSpeed * 0.8;
+                        this.isCruising = false; // 巡行中断
                     } else if (nearestFood && nearestDist < detectionRange) {
+                        // 餌を発見！巡行モード中断
+                        this.isCruising = false;
+
                         // 好みの餌かチェック
                         const isFavoriteFood = (this.personality === 'shy' && nearestFood.type === 'slow') ||
                                               (this.personality === 'clumsy' && nearestFood.type === 'floating');
@@ -405,11 +418,32 @@
                             }
                         }
                     } else {
-                        // ランダムな目標地点
-                        if (Math.hypot(this.targetX - this.x, this.targetY - this.y) < 50 || Math.random() < 0.01) {
-                            this.targetX = Math.random() * (canvas.width - 100) + 50;
-                            this.targetY = Math.random() * (canvas.height - 100) + 50;
+                        // 巡行モード：まっすぐゆらゆら泳ぐ
+                        if (!this.isCruising) {
+                            // 巡行モード開始
+                            this.isCruising = true;
+                            this.cruisingTimer = Math.random() * 180 + 240; // 4-7秒
+                            this.cruisingAngle = this.angle;
                         }
+
+                        this.cruisingTimer--;
+                        this.wobbleOffset += 0.08;
+
+                        // タイマーが切れたらターン
+                        if (this.cruisingTimer <= 0) {
+                            // ターン！新しい方向へ
+                            this.cruisingAngle = Math.random() * Math.PI * 2;
+                            this.cruisingTimer = Math.random() * 180 + 240; // 4-7秒
+                        }
+
+                        // ゆらゆら揺れながら進む（±5度程度）
+                        const wobble = Math.sin(this.wobbleOffset) * 0.08;
+                        this.targetAngle = this.cruisingAngle + wobble;
+
+                        // まっすぐ進む方向に目標を設定
+                        this.targetX = this.x + Math.cos(this.targetAngle) * 100;
+                        this.targetY = this.y + Math.sin(this.targetAngle) * 100;
+
                         this.speed = this.baseSpeed;
                     }
                 }
@@ -423,6 +457,18 @@
                     this.x += (dx / dist) * this.speed;
                     this.y += (dy / dist) * this.speed;
                     this.targetAngle = Math.atan2(dy, dx);
+                }
+
+                // 壁に近づいたら方向転換（巡行モード中も）
+                const margin = 80;
+                if (this.x < margin || this.x > canvas.width - margin ||
+                    this.y < margin || this.y > canvas.height - margin) {
+                    // 中心に向かう角度
+                    const centerAngle = Math.atan2(canvas.height / 2 - this.y, canvas.width / 2 - this.x);
+                    this.cruisingAngle = centerAngle;
+                    this.targetAngle = centerAngle;
+                    this.isCruising = true;
+                    this.cruisingTimer = Math.random() * 180 + 240;
                 }
 
                 // 角度をスムーズに変更
